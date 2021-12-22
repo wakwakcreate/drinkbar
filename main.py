@@ -41,6 +41,13 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+
+    # member_ids_res = line_bot_api.get_group_member_ids(event.source.group_id)
+    print("group_id", event.source.group_id)
+
+    # print(member_ids_res.member_ids)
+    # print(member_ids_res.next)
+
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=event.message.text))
