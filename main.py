@@ -23,19 +23,7 @@ YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
-
-game_state = 0
-
-user_ids = set()
-user_names = {}
-
-# TODO: Remove this
-# Dummy users
-user_ids.add("0")
-user_ids.add("1")
-user_names["0"] = "Aマン"
-user_names["1"] = "Bマン"
-user_drinks = {}
+# Constants
 drink_names = []
 drink_names.append("メロンソーダ")
 drink_names.append("オレンジジュース")
@@ -43,10 +31,30 @@ drink_names.append("ウーロンチャ")
 drink_names.append("ジャスミンティ")
 
 
-# @app.route("/", methods=['POST'])
-# def root():
-#     print("debug")
-#     return 'OK'
+class Game:
+    def __init__(self):
+        self.state = 0
+        self.user_ids = []
+        self.user_names = {}
+        self.user_drinks = {}
+
+        # TODO: Remove this
+        # Dummy users
+        self.user_ids.append("0")
+        self.user_ids.append("1")
+        self.user_names["0"] = "Aマン"
+        self.user_names["1"] = "Bマン"
+
+    def get_user_from_drink(self, drink_id):
+        user_id = None
+        for k, v in self.user_drinks.items():
+            if v == drink_id:  # オレンジ
+                user_id = k
+        return user_id
+
+
+# Main game states (key: group_id)
+games = {}
 
 
 @app.route("/callback", methods=['POST'])
@@ -70,32 +78,46 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    global game_state
+    source = event.source
+    group_id = source.group_id
+    user_id = source.user_id
 
-    if game_state == 0:
-        source = event.source
-        group_id = source.group_id
-        user_id = source.user_id
+    # Find game state or create new game
+    if group_id in games:
+        game = games[group_id]
+    else:
+        games[group_id] = Game()
+        game = games[group_id]
 
+    if game.state == 0:
+        # ユーザーを3人確定する
+
+        # Add user
+        game.user_ids.append(user_id)
+
+        # Get new user name
         profile = line_bot_api.get_group_member_profile(group_id, user_id)
-        user_names[user_id] = profile.display_name
-        user_ids.add(user_id)
+        game.user_names[user_id] = profile.display_name
 
         # ユーザーが３人揃った場合
-        if len(user_ids) == 3:
+        if len(game.user_ids) == 3:
             # ドリンクをシャッフルする
             drink_ids = [0, 1]  # メロンとオレンジは確定
             drink_ids.append(random.choice([2, 3]))  # ウーロンとジャスミンをランダムで選択
             random.shuffle(drink_ids)  # ランダムに憑依
-            print(drink_ids)
 
-            for idx, user_id in enumerate(user_ids):
-                # TODO: Remove this
-                # if user_id == "0" or user_id == "1":
-                #     continue
+            for i, user_id in enumerate(game.user_ids):
+                game.user_drinks[user_id] = drink_ids[i]
 
-                user_drinks[user_id] = drink_ids[idx]
-                message = f"あなた（{user_names[user_id]}）に{drink_names[user_drinks[user_id]]}が乗り移りました。"
+                # TODO: Remove this condition for the release
+                if user_id == "0" or user_id == "1":
+                    # Dummy users
+                    continue
+
+                # TODO: Comment out following lines for the release
+                # user_name = game.user_names[user_id]
+                # drink_name = drink_names[drink_ids[i]]
+                # message = f"あなた（{user_name}）に{drink_name}が乗り移りました。"
                 # line_bot_api.push_message(
                 #     event.source.user_id, TextSendMessage(text=message))
 
@@ -110,22 +132,23 @@ def handle_message(event):
                 event.reply_token,
                 selection_message)
 
-            game_state = 1
+            # State transition
+            game.state = 1
 
-    # ジャスミンティが誰か選択
-    elif game_state == 1:
+    elif game.state == 1:
+        # ジャスミンティが誰かを選択
+
         # TODO: Optimize here
-        orange_id = ""
-        for k, v in user_drinks.items():
-            if v == 1:  # オレンジ
-                orange_id = k
-        assert(orange != "")
+        # Find orange user
+        orange_id = game.get_user_from_drink(1)
+        assert(orange_id is not None)
 
-        message = f"オレンジジュースの{user_names[orange_id]}さん、ジャスミンティがいるか推理し、1つ選ぼう"
+        user_name = game.user_names[orange_id]
+        message = f"オレンジジュースの{user_name}さん、ジャスミンティがいるか推理し、1つ選ぼう"
         actions = []
-        for id in user_ids:
-            name = user_names[id]
-            actions.append(MessageAction(label=name, text=name))
+        for id in game.user_ids:
+            user_name = game.user_names[id]
+            actions.append(MessageAction(label=user_name, text=user_name))
         actions.append(MessageAction(label='いない', text='いない'))
         selection = ButtonsTemplate(text=message, actions=actions)
         selection_message = TemplateSendMessage(
@@ -134,26 +157,27 @@ def handle_message(event):
             event.reply_token,
             selection_message)
 
-        game_state = 2
+        # State transition
+        game.state = 2
 
-    # 正解を表示
-    elif game_state == 2:
+    elif game.state == 2:
+        # 正解を表示
+
         # TODO: Optimize here
-        jasmine_id = -1
-        for k, v in user_drinks.items():
-            if v == 3:  # ジャスミンティ
-                jasmine_id = k
+        # Find jasmine user
+        jasmine_id = game.get_user_from_drink(3)
 
         message = "答え:\n"
-        if jasmine_id == -1:
+        if jasmine_id is None:
             message += "ジャスミンティはいませんでした！"
         else:
-            message += f"ジャスミンティは{user_names[jasmine_id]}でした！"
+            user_name = game.user_names[jasmine_id]
+            message += f"ジャスミンティは{user_name}でした！"
 
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=message))
-        game_state = 0
+        game.state = 0
 
 
 if __name__ == "__main__":
