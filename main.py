@@ -1,5 +1,6 @@
 import os
 import random
+import pandas as pd
 from flask import Flask, request, abort
 
 from linebot import (
@@ -14,6 +15,17 @@ from linebot.models import (
     ButtonsTemplate,
     PostbackAction, MessageAction
 )
+
+scripts = {}
+
+
+def load_scripts():
+    scenario = pd.read_csv("scenario.csv")
+    scripts['scenario'] = scenario
+
+
+load_scripts()
+
 
 app = Flask(__name__)
 
@@ -34,14 +46,15 @@ drink_names.append("ジャスミンティ")
 class Game:
     def __init__(self):
         self.state = 0
-        self.user_ids = []
+        self.user_ids = set()
         self.user_names = {}
         self.user_drinks = {}
+        self.scenario = 0
 
         # TODO: Remove this
         # Dummy users
-        self.user_ids.append("0")
-        self.user_ids.append("1")
+        self.user_ids.add("0")
+        self.user_ids.add("1")
         self.user_names["0"] = "Aマン"
         self.user_names["1"] = "Bマン"
 
@@ -83,17 +96,16 @@ def handle_message(event):
     user_id = source.user_id
 
     # Find game state or create new game
-    if group_id in games:
-        game = games[group_id]
-    else:
+    if group_id not in games:
         games[group_id] = Game()
-        game = games[group_id]
+
+    game = games[group_id]
 
     if game.state == 0:
         # ユーザーを3人確定する
 
         # Add user
-        game.user_ids.append(user_id)
+        game.user_ids.add(user_id)
 
         # Get new user name
         profile = line_bot_api.get_group_member_profile(group_id, user_id)
@@ -105,6 +117,13 @@ def handle_message(event):
             drink_ids = [0, 1]  # メロンとオレンジは確定
             drink_ids.append(random.choice([2, 3]))  # ウーロンとジャスミンをランダムで選択
             random.shuffle(drink_ids)  # ランダムに憑依
+
+            # シナリオをランダムに決定
+            scenarios = scripts['scenario']
+            num_scenarios = len(scenarios.index)
+            scenario_id = random.randint(0, num_scenarios - 1)
+            game.scenario = scenarios.iloc[scenario_id]
+            scenario = game.scenario
 
             for i, user_id in enumerate(game.user_ids):
                 game.user_drinks[user_id] = drink_ids[i]
@@ -121,11 +140,14 @@ def handle_message(event):
                 # line_bot_api.push_message(
                 #     event.source.user_id, TextSendMessage(text=message))
 
-            selection = ButtonsTemplate(text='トークテーマ', actions=[
-                MessageAction(label='和食', text='和食'),
-                MessageAction(label='洋食', text='洋食'),
-                MessageAction(label='中華', text='中華'),
-            ])
+            # トークテーマ出題
+            question = scenario['question']
+            actions = []
+            for i in range(3):
+                answer = scenario['ans' + str(i)]
+                actions.append(MessageAction(label=answer, text=answer))
+
+            selection = ButtonsTemplate(text=question, actions=actions)
             selection_message = TemplateSendMessage(
                 alt_text='トークテーマ答え選択肢', template=selection)
             line_bot_api.reply_message(
@@ -177,7 +199,14 @@ def handle_message(event):
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=message))
+
         game.state = 0
+
+    print(f"Debug:")
+    print(f"{game.state}")
+    print(f"{game.user_ids}")
+    print(f"{game.user_names}")
+    print(f"{game.scenario}")
 
 
 if __name__ == "__main__":
