@@ -21,7 +21,9 @@ scripts = {}
 
 def load_scripts():
     scenario = pd.read_csv("scenario.csv")
+    mission = pd.read_csv("mission.csv")
     scripts['scenario'] = scenario
+    scripts['mission'] = mission
 
 
 load_scripts()
@@ -49,6 +51,8 @@ class Game:
         self.user_ids = set()
         self.user_names = {}
         self.user_drinks = {}
+        self.user_missions = {}
+        self.chapon = 0
         self.scenario = 0
 
         # TODO: Remove this
@@ -125,18 +129,33 @@ def handle_message(event):
             game.scenario = scenarios.iloc[scenario_id]
             scenario = game.scenario
 
+            # チャポンの選択肢をランダムに決定
+            game.chapon = random.randint(0, 2)
+
             for i, user_id in enumerate(game.user_ids):
                 game.user_drinks[user_id] = drink_ids[i]
+                mission = scripts['mission'].iloc[drink_ids[i]]['mission']
+                game.user_missions[user_id] = mission
 
                 # TODO: Remove this condition for the release
-                if user_id == "0" or user_id == "1":
-                    # Dummy users
-                    continue
+                # if user_id == "0" or user_id == "1":
+                #     # Dummy users
+                #     continue
 
+                user_name = game.user_names[user_id]
+                drink_name = drink_names[game.user_drinks[user_id]]
+                message = f"あなた（{user_name}）に{drink_name}が乗り移ったぞ。\n"
+                message += f"{drink_name}のあなたは、{mission}\n"
+                if drink_ids[i] == 0:
+                    chapon = scenario['ans' + str(i)]
+                    message += f"メロンソーダのあなただけに、チャポンの選択肢が「{chapon}」であることを教えてあげるぞ。\n"
+                else:
+                    message += f"チャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
+                message += f"これがミッションだ！"
+
+                print("Debug:")
+                print(message)
                 # TODO: Comment out following lines for the release
-                # user_name = game.user_names[user_id]
-                # drink_name = drink_names[drink_ids[i]]
-                # message = f"あなた（{user_name}）に{drink_name}が乗り移りました。"
                 # line_bot_api.push_message(
                 #     event.source.user_id, TextSendMessage(text=message))
 
@@ -191,10 +210,17 @@ def handle_message(event):
 
         message = "答え:\n"
         if jasmine_id is None:
-            message += "ジャスミンティはいませんでした！"
+            message += "ジャスミンティはいませんでした！\n"
         else:
             user_name = game.user_names[jasmine_id]
-            message += f"ジャスミンティは{user_name}でした！"
+            message += f"ジャスミンティは{user_name}でした！\n"
+
+        message += "\n配役:\n"
+        for id in game.user_ids:
+            message += game.user_names[id] + ": " + \
+                drink_names[game.user_drinks[id]] + "\n"
+
+        message += "\nチャポンの選択肢:\n" + game.scenario["ans" + str(game.chapon)]
 
         line_bot_api.reply_message(
             event.reply_token,
