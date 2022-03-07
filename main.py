@@ -57,10 +57,10 @@ class Game:
 
         # TODO: Remove this
         # Dummy users
-        self.user_ids.add("0")
-        self.user_ids.add("1")
-        self.user_names["0"] = "Aマン"
-        self.user_names["1"] = "Bマン"
+        # self.user_ids.add("0")
+        # self.user_ids.add("1")
+        # self.user_names["0"] = "Aマン"
+        # self.user_names["1"] = "Bマン"
 
     def get_user_from_drink(self, drink_id):
         user_id = None
@@ -137,11 +137,6 @@ def handle_message(event):
                 mission = scripts['mission'].iloc[drink_ids[i]]['mission']
                 game.user_missions[user_id] = mission
 
-                # TODO: Remove this condition for the release
-                # if user_id == "0" or user_id == "1":
-                #     # Dummy users
-                #     continue
-
                 user_name = game.user_names[user_id]
                 drink_name = drink_names[game.user_drinks[user_id]]
                 message = f"あなた（{user_name}）に{drink_name}が乗り移ったぞ。\n"
@@ -155,9 +150,15 @@ def handle_message(event):
 
                 print("Debug:")
                 print(message)
+
+                # TODO: Remove this condition for the release
+                if user_id == "0" or user_id == "1":
+                    # Dummy users
+                    continue
+
                 # TODO: Comment out following lines for the release
-                # line_bot_api.push_message(
-                #     event.source.user_id, TextSendMessage(text=message))
+                line_bot_api.push_message(
+                    user_id, TextSendMessage(text=message))
 
             # トークテーマ出題
             question = scenario['question']
