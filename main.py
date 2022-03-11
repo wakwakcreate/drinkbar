@@ -58,10 +58,12 @@ class Game:
         self.scenario = 0
 
         # Dummy users
-        if num_people >= 1:
+        if num_people == 1:
             self.user_ids.add("0")
             self.user_names["0"] = "Aマン"
-        if num_people == 1:
+            self.user_ids.add("1")
+            self.user_names["1"] = "Bマン"
+        if num_people == 2:
             self.user_ids.add("1")
             self.user_names["1"] = "Bマン"
 
