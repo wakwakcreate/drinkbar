@@ -17,11 +17,13 @@ from linebot.models import (
 )
 
 scripts = {}
+scenario_url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/scenario.csv"
+mission_url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/mission.csv"
 
 
 def load_scripts():
-    scenario = pd.read_csv("scenario.csv")
-    mission = pd.read_csv("mission.csv")
+    scenario = pd.read_csv(scenario_url)
+    mission = pd.read_csv(mission_url)
     scripts['scenario'] = scenario
     scripts['mission'] = mission
 
