@@ -244,10 +244,11 @@ def handle_message(event):
         game.state = 0
 
     print(f"Debug:")
-    print(f"{game.state}")
-    print(f"{game.user_ids}")
-    print(f"{game.user_names}")
-    print(f"{game.scenario}")
+    print(f"{games=}")
+    print(f"{game.state=}")
+    print(f"{game.user_ids=}")
+    print(f"{game.user_names=}")
+    print(f"{game.scenario=}")
 
 
 if __name__ == "__main__":
