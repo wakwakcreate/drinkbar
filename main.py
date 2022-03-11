@@ -48,7 +48,7 @@ drink_names.append("ジャスミンティ")
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, num_people=3):
         self.state = 0
         self.user_ids = set()
         self.user_names = {}
@@ -57,12 +57,13 @@ class Game:
         self.chapon = 0
         self.scenario = 0
 
-        # TODO: Remove this
         # Dummy users
-        # self.user_ids.add("0")
-        # self.user_ids.add("1")
-        # self.user_names["0"] = "Aマン"
-        # self.user_names["1"] = "Bマン"
+        if num_people >= 1:
+            self.user_ids.add("0")
+            self.user_names["0"] = "Aマン"
+        if num_people == 1:
+            self.user_ids.add("1")
+            self.user_names["1"] = "Bマン"
 
     def get_user_from_drink(self, drink_id):
         user_id = None
@@ -105,6 +106,22 @@ def handle_message(event):
     if group_id not in games:
         games[group_id] = Game()
 
+    # デバッグコマンドを処理
+    if event.message.text == "debug reload":
+        load_scripts()
+        games[group_id] = Game()
+        return
+    if event.message.text == "debug one":
+        games[group_id] = Game(1)
+        return
+    if event.message.text == "debug two":
+        games[group_id] = Game(2)
+        return
+    if event.message.text == "debug three":
+        games[group_id] = Game(3)
+        return
+
+    # 既存の game 状態を取得
     game = games[group_id]
 
     if game.state == 0:
@@ -150,15 +167,10 @@ def handle_message(event):
                     message += f"チャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
                 message += f"これがミッションだ！"
 
-                print("Debug:")
-                print(message)
-
-                # TODO: Remove this condition for the release
+                # Do not send message to dummy users
                 if user_id == "0" or user_id == "1":
-                    # Dummy users
                     continue
 
-                # TODO: Comment out following lines for the release
                 line_bot_api.push_message(
                     user_id, TextSendMessage(text=message))
 
@@ -182,7 +194,6 @@ def handle_message(event):
     elif game.state == 1:
         # ジャスミンティが誰かを選択
 
-        # TODO: Optimize here
         # Find orange user
         orange_id = game.get_user_from_drink(1)
         assert(orange_id is not None)
@@ -207,7 +218,6 @@ def handle_message(event):
     elif game.state == 2:
         # 正解を表示
 
-        # TODO: Optimize here
         # Find jasmine user
         jasmine_id = game.get_user_from_drink(3)
 
