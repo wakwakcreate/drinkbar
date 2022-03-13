@@ -1,7 +1,7 @@
 import os
 import random
 import pandas as pd
-from flask import Flask, request, abort
+from flask import Flask, request, abort, g
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -75,8 +75,11 @@ class Game:
         return user_id
 
 
-# Main game states (key: group_id)
-games = {}
+def get_games():
+    games = getattr(g, '_games', None)
+    if games is None:
+        games = g._games = {}
+    return games
 
 
 @app.route("/callback", methods=['POST'])
@@ -103,6 +106,8 @@ def handle_message(event):
     source = event.source
     group_id = source.group_id
     user_id = source.user_id
+
+    games = get_games()
 
     # Find game state or create new game
     if group_id not in games:
