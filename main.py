@@ -50,6 +50,7 @@ drink_names.append("ジャスミンティ")
 class Game:
     def __init__(self, num_people=3):
         self.state = 0
+        self.num_people = num_people
         self.user_ids = set()
         self.user_names = {}
         self.user_drinks = {}
@@ -250,6 +251,7 @@ def handle_message(event):
 
     print(f"Debug:")
     print(f"{games=}")
+    print(f"{game=}")
     print(f"{game.state=}")
     print(f"{game.user_ids=}")
     print(f"{game.user_names=}")
