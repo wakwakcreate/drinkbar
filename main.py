@@ -11,7 +11,7 @@ from linebot.exceptions import (
 )
 from linebot.models import (
     MessageEvent, PostbackEvent,
-    TextMessage, TextSendMessage, TemplateSendMessage,
+    TextMessage, TextSendMessage, ImageSendMessage, TemplateSendMessage,
     ButtonsTemplate,
     PostbackAction, MessageAction
 )
@@ -57,6 +57,7 @@ class Game:
         self.user_missions = {}
         self.chapon = 0
         self.scenario = 0
+        self.selected_answer = None
 
         # Dummy users
         if num_people == 1:
@@ -76,14 +77,14 @@ class Game:
         return user_id
 
 
+games = {}
+
+
 def get_games():
-    games = getattr(g, '_games', None)
-    if games is None:
-        games = g._games = {}
     return games
 
 
-@app.route("/callback", methods=['POST'])
+@app.route("/", methods=['POST'])
 def callback():
     # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
@@ -119,13 +120,13 @@ def handle_message(event):
         load_scripts()
         games[group_id] = Game()
         return
-    if event.message.text == "debug one":
+    if event.message.text == "debug 1":
         games[group_id] = Game(1)
         return
-    if event.message.text == "debug two":
+    if event.message.text == "debug 2":
         games[group_id] = Game(2)
         return
-    if event.message.text == "debug three":
+    if event.message.text == "debug 3":
         games[group_id] = Game(3)
         return
 
@@ -159,6 +160,9 @@ def handle_message(event):
             # チャポンの選択肢をランダムに決定
             game.chapon = random.randint(0, 2)
 
+            # 選択された回答をリセット
+            game.selected_answer = None
+
             for i, user_id in enumerate(game.user_ids):
                 game.user_drinks[user_id] = drink_ids[i]
                 mission = scripts['mission'].iloc[drink_ids[i]]['mission']
@@ -179,15 +183,16 @@ def handle_message(event):
                 if user_id == "0" or user_id == "1":
                     continue
 
-                line_bot_api.push_message(
-                    user_id, TextSendMessage(text=message))
+                # NOTICE: This consumes API call count
+                # line_bot_api.push_message(
+                #     user_id, TextSendMessage(text=message))
 
             # トークテーマ出題
             question = scenario['question']
             actions = []
             for i in range(3):
                 answer = scenario['ans' + str(i)]
-                actions.append(MessageAction(label=answer, text=answer))
+                actions.append(PostbackAction(label=answer, data=i))
 
             selection = ButtonsTemplate(text=question, actions=actions)
             selection_message = TemplateSendMessage(
@@ -199,7 +204,72 @@ def handle_message(event):
             # State transition
             game.state = 1
 
-    elif game.state == 1:
+    elif game.state == 2:
+        # 正解を表示
+
+        # Find jasmine user
+        jasmine_id = game.get_user_from_drink(3)
+
+        # Prepare image message
+        image_url = "https://github.com/wakwakcreate/drink_scripts/blob/main/maru2.jpg?raw=true"
+        image_message = ImageSendMessage(
+            original_content_url=image_url,
+            preview_image_url=image_url)
+
+        # Prepare text message
+        message = "答え:\n"
+        if jasmine_id is None:
+            message += "ジャスミンティはいませんでした！\n"
+        else:
+            user_name = game.user_names[jasmine_id]
+            message += f"ジャスミンティは{user_name}でした！\n"
+
+        message += "\n配役:\n"
+        for id in game.user_ids:
+            message += game.user_names[id] + ": " + \
+                drink_names[game.user_drinks[id]] + "\n"
+
+        message += "\nチャポンの選択肢:\n" + game.scenario["ans" + str(game.chapon)]
+
+        text_message = TextSendMessage(text=message)
+
+        # Send answer message
+        line_bot_api.reply_message(
+            event.reply_token,
+            [image_message, text_message])
+
+        game.state = 0
+
+    print(f"Debug:")
+    print(f"{games=}")
+    print(f"{game=}")
+    print(f"{game.state=}")
+    print(f"{game.user_ids=}")
+    print(f"{game.user_names=}")
+    print(f"{game.scenario=}")
+
+
+@handler.add(PostbackEvent)
+def handle_postback(event):
+    source = event.source
+    group_id = source.group_id
+    user_id = source.user_id
+
+    games = get_games()
+
+    # 既存の game 状態を取得
+    game = games[group_id]
+
+    if game.state == 1:
+        if game.selected_answer is None:
+            game.selected_answer = event.postback.data
+        else:
+            return
+        scenario = game.scenario
+        answer_str = scenario['ans' + str(game.selected_answer)]
+        message = f"{answer_str} が選択されたぞ。"
+        text_message = TextSendMessage(text=message)
+
         # ジャスミンティが誰かを選択
 
         # Find orange user
@@ -218,44 +288,10 @@ def handle_message(event):
             alt_text='ジャスミン答え選択肢', template=selection)
         line_bot_api.reply_message(
             event.reply_token,
-            selection_message)
+            [text_message, selection_message])
 
         # State transition
         game.state = 2
-
-    elif game.state == 2:
-        # 正解を表示
-
-        # Find jasmine user
-        jasmine_id = game.get_user_from_drink(3)
-
-        message = "答え:\n"
-        if jasmine_id is None:
-            message += "ジャスミンティはいませんでした！\n"
-        else:
-            user_name = game.user_names[jasmine_id]
-            message += f"ジャスミンティは{user_name}でした！\n"
-
-        message += "\n配役:\n"
-        for id in game.user_ids:
-            message += game.user_names[id] + ": " + \
-                drink_names[game.user_drinks[id]] + "\n"
-
-        message += "\nチャポンの選択肢:\n" + game.scenario["ans" + str(game.chapon)]
-
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=message))
-
-        game.state = 0
-
-    print(f"Debug:")
-    print(f"{games=}")
-    print(f"{game=}")
-    print(f"{game.state=}")
-    print(f"{game.user_ids=}")
-    print(f"{game.user_names=}")
-    print(f"{game.scenario=}")
 
 
 if __name__ == "__main__":
