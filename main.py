@@ -288,14 +288,12 @@ def handle_postback(event):
         elif game.selected_id == jasmine_id:
             winner = 1
             image_name = "orange"
-        elif game.selected_id == melon_id:
-            if oolong_id is not None:
-                winner = 2
-                image_name = "oolong"
-        elif game.selected_id != jasmine_id:
-            if jasmine_id is not None:
-                winner = 3
-                image_name = "jasmine"
+        elif game.selected_id == melon_id and oolong_id is not None:
+            winner = 2
+            image_name = "oolong"
+        elif game.selected_id != jasmine_id and jasmine_id is not None:
+            winner = 3
+            image_name = "jasmine"
 
         # Prepare image message
         image_url = f"https://github.com/wakwakcreate/drink_scripts/blob/main/{image_name}.png?raw=true"
@@ -317,6 +315,13 @@ def handle_postback(event):
                 drink_names[game.user_drinks[id]] + "\n"
 
         message += "\nチャポンの選択肢:\n" + game.scenario["ans" + str(game.chapon)]
+
+        message += "\n選択された選択肢:\n" + \
+            game.scenario["ans" + game.selected_answer]
+        user_name = "いない"
+        if game.selected_id != "-1":
+            user_name = game.user_names[game.selected_id]
+        message += "\n選択されたユーザー:\n" + user_name
 
         text_message = TextSendMessage(text=message)
 
