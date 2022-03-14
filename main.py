@@ -58,6 +58,7 @@ class Game:
         self.chapon = 0
         self.scenario = 0
         self.selected_answer = None
+        self.selected_id = None
 
         # Dummy users
         if num_people == 1:
@@ -76,6 +77,18 @@ class Game:
                 user_id = k
         return user_id
 
+    def print_state(self):
+        print(f"{self.state=}")
+        print(f"{self.num_people=}")
+        print(f"{self.user_ids=}")
+        print(f"{self.user_names=}")
+        print(f"{self.user_drinks=}")
+        print(f"{self.user_missions=}")
+        print(f"{self.chapon=}")
+        print(f"{self.scenario=}")
+        print(f"{self.selected_answer=}")
+        print(f"{self.selected_id=}")
+
 
 games = {}
 
@@ -84,7 +97,7 @@ def get_games():
     return games
 
 
-@app.route("/", methods=['POST'])
+@ app.route("/", methods=['POST'])
 def callback():
     # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
@@ -103,7 +116,7 @@ def callback():
     return 'OK'
 
 
-@handler.add(MessageEvent, message=TextMessage)
+@ handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     source = event.source
     group_id = source.group_id
@@ -160,9 +173,6 @@ def handle_message(event):
             # チャポンの選択肢をランダムに決定
             game.chapon = random.randint(0, 2)
 
-            # 選択された回答をリセット
-            game.selected_answer = None
-
             for i, user_id in enumerate(game.user_ids):
                 game.user_drinks[user_id] = drink_ids[i]
                 mission = scripts['mission'].iloc[drink_ids[i]]['mission']
@@ -173,7 +183,7 @@ def handle_message(event):
                 message = f"あなた（{user_name}）に{drink_name}が乗り移ったぞ。\n"
                 message += f"{drink_name}のあなたは、{mission}\n"
                 if drink_ids[i] == 0:
-                    chapon = scenario['ans' + str(i)]
+                    chapon = scenario['ans' + str(game.chapon)]
                     message += f"メロンソーダのあなただけに、チャポンの選択肢が「{chapon}」であることを教えてあげるぞ。\n"
                 else:
                     message += f"チャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
@@ -188,6 +198,7 @@ def handle_message(event):
                 #     user_id, TextSendMessage(text=message))
 
             # トークテーマ出題
+            game.selected_answer = None
             question = scenario['question']
             actions = []
             for i in range(3):
@@ -204,52 +215,10 @@ def handle_message(event):
             # State transition
             game.state = 1
 
-    elif game.state == 2:
-        # 正解を表示
-
-        # Find jasmine user
-        jasmine_id = game.get_user_from_drink(3)
-
-        # Prepare image message
-        image_url = "https://github.com/wakwakcreate/drink_scripts/blob/main/maru2.jpg?raw=true"
-        image_message = ImageSendMessage(
-            original_content_url=image_url,
-            preview_image_url=image_url)
-
-        # Prepare text message
-        message = "答え:\n"
-        if jasmine_id is None:
-            message += "ジャスミンティはいませんでした！\n"
-        else:
-            user_name = game.user_names[jasmine_id]
-            message += f"ジャスミンティは{user_name}でした！\n"
-
-        message += "\n配役:\n"
-        for id in game.user_ids:
-            message += game.user_names[id] + ": " + \
-                drink_names[game.user_drinks[id]] + "\n"
-
-        message += "\nチャポンの選択肢:\n" + game.scenario["ans" + str(game.chapon)]
-
-        text_message = TextSendMessage(text=message)
-
-        # Send answer message
-        line_bot_api.reply_message(
-            event.reply_token,
-            [image_message, text_message])
-
-        game.state = 0
-
-    print(f"Debug:")
-    print(f"{games=}")
-    print(f"{game=}")
-    print(f"{game.state=}")
-    print(f"{game.user_ids=}")
-    print(f"{game.user_names=}")
-    print(f"{game.scenario=}")
+    game.print_state()
 
 
-@handler.add(PostbackEvent)
+@ handler.add(PostbackEvent)
 def handle_postback(event):
     source = event.source
     group_id = source.group_id
@@ -276,13 +245,15 @@ def handle_postback(event):
         orange_id = game.get_user_from_drink(1)
         assert(orange_id is not None)
 
+        game.selected_id = None
+
         user_name = game.user_names[orange_id]
         message = f"オレンジジュースの{user_name}さん、ジャスミンティがいるか推理し、1つ選ぼう"
         actions = []
         for id in game.user_ids:
             user_name = game.user_names[id]
-            actions.append(MessageAction(label=user_name, text=user_name))
-        actions.append(MessageAction(label='いない', text='いない'))
+            actions.append(PostbackAction(label=user_name, data=id))
+        actions.append(PostbackAction(label='いない', data="-1"))
         selection = ButtonsTemplate(text=message, actions=actions)
         selection_message = TemplateSendMessage(
             alt_text='ジャスミン答え選択肢', template=selection)
@@ -292,6 +263,71 @@ def handle_postback(event):
 
         # State transition
         game.state = 2
+
+    elif game.state == 2:
+        # 正解を表示
+
+        # Get drink user id
+        melon_id = game.get_user_from_drink(0)
+        orange_id = game.get_user_from_drink(1)
+        oolong_id = game.get_user_from_drink(2)
+        jasmine_id = game.get_user_from_drink(3)
+
+        # 勝者を決定
+        if game.selected_id is not None:
+            return
+
+        if event.postback.data != "-1":
+            game.selected_id = event.postback.data
+
+        winner = None
+        image_name = "draw"
+        if game.selected_answer == str(game.chapon):
+            winner = 0
+            image_name = "melon"
+        elif game.selected_id == jasmine_id:
+            winner = 1
+            image_name = "orange"
+        elif game.selected_id == melon_id:
+            if oolong_id is not None:
+                winner = 2
+                image_name = "oolong"
+        elif game.selected_id != jasmine_id:
+            if jasmine_id is not None:
+                winner = 3
+                image_name = "jasmine"
+
+        # Prepare image message
+        image_url = f"https://github.com/wakwakcreate/drink_scripts/blob/main/{image_name}.png?raw=true"
+        image_message = ImageSendMessage(
+            original_content_url=image_url,
+            preview_image_url=image_url)
+
+        # Prepare text message
+        message = "答えあわせ:\n"
+        if jasmine_id is None:
+            message += "ジャスミンティはいませんでした！\n"
+        else:
+            user_name = game.user_names[jasmine_id]
+            message += f"ジャスミンティは{user_name}でした！\n"
+
+        message += "\n配役:\n"
+        for id in game.user_ids:
+            message += game.user_names[id] + ": " + \
+                drink_names[game.user_drinks[id]] + "\n"
+
+        message += "\nチャポンの選択肢:\n" + game.scenario["ans" + str(game.chapon)]
+
+        text_message = TextSendMessage(text=message)
+
+        # Send answer message
+        line_bot_api.reply_message(
+            event.reply_token,
+            [image_message, text_message])
+
+        game.state = 0
+
+    game.print_state()
 
 
 if __name__ == "__main__":
