@@ -212,13 +212,22 @@ def handle_message(event):
                 event.reply_token,
                 selection_message)
 
-            #↓カウントダウンのGIF画像送信
+            #↓カウントダウンのGIF画像送信、まだうまくいってない
         # Prepare image message
         image_url = f"https://github.com/wakwakcreate/drink_scripts/blob/main/countdown.gif?raw=true"
         image_message = ImageSendMessage(
             original_content_url=image_url,
             preview_image_url=image_url)            
            
+            
+            from linebot.models import ImageSendMessage
+def make_image_message():
+    messages = ImageSendMessage(
+        original_content_url="https://github.com/wakwakcreate/drink_scripts/blob/main/countdown.gif", #JPEG 最大画像サイズ：240×240 最大ファイルサイズ：1MB(注意:仕様が変わっていた)
+        preview_image_url="https://github.com/wakwakcreate/drink_scripts/blob/main/countdown.gif" #JPEG 最大画像サイズ：1024×1024 最大ファイルサイズ：1MB(注意:仕様が変わっていた)
+    )
+    return messages
+            
             #カウントダウンのGIF画像送信↑
             
             # State transition
