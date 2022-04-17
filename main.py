@@ -214,7 +214,7 @@ def handle_message(event):
 
             #↓カウントダウンのGIF画像送信、まだうまくいってない
         # Prepare image message
-        image_url = f"https://github.com/wakwakcreate/drink_scripts/blob/main/countdown.gif?raw=true"
+        image_url = "https://github.com/wakwakcreate/drink_scripts/blob/main/countdown.gif"
         image_message = ImageSendMessage(
             original_content_url=image_url,
             preview_image_url=image_url)            
