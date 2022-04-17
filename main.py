@@ -212,13 +212,7 @@ def handle_message(event):
                 event.reply_token,
                 selection_message)
             
-            line_bot_api.reply_message(
-                event.reply_token,
-               selection_message)
-                #[image_message, text_message])
-
-            #カウントダウンのGIF画像送信、まだうまくいってない↓↓↓↓↓↓↓↓↓↓↓↓
-            
+        #カウントダウンのGIF画像送信、まだうまくいってない↓↓↓↓↓↓↓↓↓↓↓↓    
         # Prepare image message
         image_url = "https://github.com/wakwakcreate/drink_scripts/blob/main/countdown.gif"
         image_message = ImageSendMessage(
@@ -226,6 +220,7 @@ def handle_message(event):
             preview_image_url=image_url)   
         
             line_bot_api.reply_message(event.reply_token,image_message)
+             #[image_message, text_message])
            
             #カウントダウンのGIF画像送信↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑event.reply_tokenがきたらimage_messageを返すだと思う
             
