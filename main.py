@@ -211,6 +211,11 @@ def handle_message(event):
             line_bot_api.reply_message(
                 event.reply_token,
                 selection_message)
+            
+            line_bot_api.reply_message(
+                event.reply_token,
+               selection_message)
+                #[image_message, text_message])
 
             #カウントダウンのGIF画像送信、まだうまくいってない↓↓↓↓↓↓↓↓↓↓↓↓
             
@@ -222,7 +227,7 @@ def handle_message(event):
         
             line_bot_api.reply_message(event.reply_token,image_message)
            
-            #カウントダウンのGIF画像送信↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+            #カウントダウンのGIF画像送信↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑event.reply_tokenがきたらimage_messageを返すだと思う
             
             # State transition
             game.state = 1
