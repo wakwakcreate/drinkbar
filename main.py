@@ -212,6 +212,15 @@ def handle_message(event):
                 event.reply_token,
                 selection_message)
 
+            #↓カウントダウンのGIF画像送信
+        # Prepare image message
+        image_url = f"https://github.com/wakwakcreate/drink_scripts/blob/main/countdown.gif?raw=true"
+        image_message = ImageSendMessage(
+            original_content_url=image_url,
+            preview_image_url=image_url)            
+           
+            #カウントダウンのGIF画像送信↑
+            
             # State transition
             game.state = 1
 
