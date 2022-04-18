@@ -208,7 +208,7 @@ def handle_message(event):
             selection = ButtonsTemplate(text=question, actions=actions)
             selection_message = TemplateSendMessage(
                 alt_text='トークテーマ答え選択肢', template=selection)
-            #line_bot_api.reply_message(
+            line_bot_api.reply_message(
                 event.reply_token,
                 selection_message)
             
