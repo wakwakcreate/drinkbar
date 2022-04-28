@@ -111,7 +111,7 @@ class Game:
             hentekos = scripts['hardmission']
         num_hentekos = len(hentekos.index)
         henteko_id = random.randint(0, num_hentekos - 1)
-        self.henteko = hentekos.iloc[henteko_id]
+        self.henteko = hentekos.iloc[henteko_id]["mission"]
 
     def get_user_from_drink(self, drink_id):
         user_id = None
@@ -133,6 +133,7 @@ class Game:
         print(f"{self.selected_answer=}")
         print(f"{self.selected_id=}")
         print(f"{self.mission_difficulty=}")
+        print(f"{self.henteko=}")
 
 
 games = {}
@@ -304,8 +305,8 @@ def handle_postback(event):
                 continue
 
             # NOTICE: This consumes API call count
-            line_bot_api.push_message(
-                user_id, TextSendMessage(text=message))
+            # line_bot_api.push_message(
+            #     user_id, TextSendMessage(text=message))
 
         # トークテーマ出題
         game.selected_answer = None
@@ -433,6 +434,7 @@ def handle_postback(event):
         if game.selected_id != "-1":
             user_name = game.user_names[game.selected_id]
         message += "\n選択されたユーザー:\n" + user_name
+        message += "\nへんてこミッション:\n" + game.henteko
 
         text_message = TextSendMessage(text=message)
 
