@@ -147,17 +147,19 @@ def handle_message(event):
     game = games[group_id]
 
     if game.state == 0:
-        # ユーザーを3人確定する
+        if len(game.user_ids) < 3:
+            # ユーザーを3人確定する
 
-        # Add user
-        game.user_ids.add(user_id)
+            # Add user
+            game.user_ids.add(user_id)
 
-        # Get new user name
-        profile = line_bot_api.get_group_member_profile(group_id, user_id)
-        game.user_names[user_id] = profile.display_name
+            # Get new user name
+            profile = line_bot_api.get_group_member_profile(group_id, user_id)
+            game.user_names[user_id] = profile.display_name
 
-        # ユーザーが３人揃った場合
         if len(game.user_ids) == 3:
+            # ユーザーが３人揃った場合
+
             # ドリンクをシャッフルする
             drink_ids = [0, 1]  # メロンとオレンジは確定
             drink_ids.append(random.choice([2, 3]))  # ウーロンとジャスミンをランダムで選択
@@ -273,7 +275,11 @@ def handle_postback(event):
         game.state = 2
 
     elif game.state == 2:
-        # 正解を表示
+        # 答え合わせメッセージ表示フェーズ
+
+        #-----------------------------
+        # 勝者決定
+        #-----------------------------
 
         # Get drink user id
         melon_id = game.get_user_from_drink(0)
@@ -281,7 +287,6 @@ def handle_postback(event):
         oolong_id = game.get_user_from_drink(2)
         jasmine_id = game.get_user_from_drink(3)
 
-        # 勝者を決定
         if game.selected_id is not None:
             return
 
@@ -303,13 +308,17 @@ def handle_postback(event):
             winner = 3
             image_name = "jasmine"
 
-        # Prepare image message
+        #-----------------------------
+        # 各種メッセージを準備
+        #-----------------------------
+
+        # 勝者ドリンクの写真メッセージ
         image_url = f"https://github.com/wakwakcreate/drink_scripts/blob/main/{image_name}.png?raw=true"
         image_message = ImageSendMessage(
             original_content_url=image_url,
             preview_image_url=image_url)
 
-        # Prepare text message
+        # 答え合わせメッセージ
         message = "答えあわせ:\n"
         if jasmine_id is None:
             message += "ジャスミンティはいませんでした！\n"
@@ -333,10 +342,27 @@ def handle_postback(event):
 
         text_message = TextSendMessage(text=message)
 
-        # Send answer message
+        # ゲーム続行 or リセットボタン メッセージ
+        message = f"ゲームを続けますか？"
+        actions = [
+            MessageAction(label="同じメンバーで続ける", text="続ける"),
+            PostbackAction(label="メンバーを変える", data="dummy"),
+        ]
+        selection = ButtonsTemplate(text=message, actions=actions)
+        selection_message = TemplateSendMessage(
+            alt_text='ゲーム続行 or リセット', template=selection)
+
+        #-----------------------------
+        # メッセージ送信
+        #-----------------------------
         line_bot_api.reply_message(
             event.reply_token,
-            [image_message, text_message])
+            [image_message, text_message, selection_message])
+
+        game.state = 0
+
+    elif game.state == 2:
+        # ゲーム続行 or Reset
 
         game.state = 0
 
