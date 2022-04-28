@@ -60,9 +60,10 @@ load_scripts()
 
 class State(enum.Enum):
     INIT = enum.auto(),
+    SELECT_DIFFICULTY = enum.auto(),
+    START = enum.auto(),
     JUDGE = enum.auto(),
     ANSWER = enum.auto(),
-    SELECT_DIFFICULTY = enum.auto(),
 
 
 class Game:
@@ -102,6 +103,15 @@ class Game:
         self.scenario = scenarios.iloc[scenario_id]
         # チャポンの選択肢をランダムに決定
         self.chapon = random.randint(0, 2)
+        # ヘンテコミッションをランダムに決定
+        assert(self.mission_difficulty is not None)
+        if self.mission_difficulty == "easy":
+            hentekos = scripts['easymission']
+        else:
+            hentekos = scripts['hardmission']
+        num_hentekos = len(hentekos.index)
+        henteko_id = random.randint(0, num_hentekos - 1)
+        self.henteko = hentekos.iloc[henteko_id]
 
     def get_user_from_drink(self, drink_id):
         user_id = None
@@ -122,6 +132,7 @@ class Game:
         print(f"{self.scenario=}")
         print(f"{self.selected_answer=}")
         print(f"{self.selected_id=}")
+        print(f"{self.mission_difficulty=}")
 
 
 games = {}
@@ -184,7 +195,7 @@ def handle_message(event):
 
     if game.state == State.INIT:
         if len(game.user_ids) < 3:
-            # ユーザーを3人確定する
+            # ユーザーを3人集める
 
             # Add user
             game.user_ids.add(user_id)
@@ -197,69 +208,25 @@ def handle_message(event):
             # ユーザーが３人揃った場合
 
             # ミッションの難易度を選択
-            # if game.mission_difficulty is None:
+            if game.mission_difficulty is None:
+                message = f"まずは最初に、へんてこミッションの難易度を選ぼう。"
+                actions = [
+                    PostbackAction(label="やさしい", data="easy"),
+                    PostbackAction(label="むずかしい", data="hard"),
+                ]
+                selection = ButtonsTemplate(text=message, actions=actions)
+                selection_message = TemplateSendMessage(
+                    alt_text='ヘンテコミッション難易度', template=selection)
 
-            #     game.state = State.SELECT_DIFFICULTY
-            #     return
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    [selection_message])
 
-            # ドリンクをシャッフルする
-            drink_ids = [0, 1]  # メロンとオレンジは確定
-            drink_ids.append(random.choice([2, 3]))  # ウーロンとジャスミンをランダムで選択
-            random.shuffle(drink_ids)  # ランダムに憑依
+                game.state = State.SELECT_DIFFICULTY
+                return
 
-            # シナリオをランダムに決定
-            game.random_init_scenario()
-
-            for i, user_id in enumerate(game.user_ids):
-                game.user_drinks[user_id] = drink_ids[i]
-                mission = scripts['mission'].iloc[drink_ids[i]]['mission']
-                game.user_missions[user_id] = mission
-
-                user_name = game.user_names[user_id]
-                drink_name = drink_names[game.user_drinks[user_id]]
-                message = f"あなた（{user_name}）に{drink_name}が乗り移ったぞ。\n"
-                message += f"{drink_name}のあなたは、{mission}\n"
-                if drink_ids[i] == 0:
-                    chapon = game.scenario['ans' + str(game.chapon)]
-                    message += f"メロンソーダのあなただけに、チャポンの選択肢が「{chapon}」であることを教えてあげるぞ。\n"
-                else:
-                    message += f"チャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
-                message += f"これがミッションだ！"
-
-                # Do not send message to dummy users
-                if user_id == "0" or user_id == "1":
-                    continue
-
-                # NOTICE: This consumes API call count
-                # line_bot_api.push_message(
-                #     user_id, TextSendMessage(text=message))
-
-            # トークテーマ出題
-            game.selected_answer = None
-            question = game.scenario['question']
-            actions = []
-            for i in range(3):
-                answer = game.scenario['ans' + str(i)]
-                actions.append(PostbackAction(label=answer, data=i))
-
-            selection = ButtonsTemplate(text=question, actions=actions)
-            selection_message = TemplateSendMessage(
-                alt_text='トークテーマ答え選択肢', template=selection)
-
-            # Prepare image message
-            image_url = "https://github.com/wakwakcreate/drink_scripts/raw/main/countdown.gif"
-
-            image_message = ImageSendMessage(
-                original_content_url=image_url,
-                preview_image_url=image_url)
-
-            line_bot_api.reply_message(
-                event.reply_token,
-                [selection_message, image_message])
-
-            # State transition
-            game.state = State.JUDGE
-
+    # Debug output
+    print("debug: handle_message")
     game.print_state()
 
 
@@ -276,14 +243,95 @@ def handle_postback(event):
     game = games[group_id]
 
     if game.state == State.INIT:
-        # ゲームをリセット
-        game.reset()
+        action = event.postback.data
+        assert(action == "continue" or action == "reset")
+        if action == "reset":
+            # ゲームをリセット
+            game.reset()
 
-        message = "参加したい3人が一言つぶやくとゲームがスタートするぞ。"
-        text_message = TextSendMessage(text=message)
+            message = "参加したい3人がそれぞれ一言つぶやくとゲームがスタートするぞ。"
+            text_message = TextSendMessage(text=message)
+            line_bot_api.reply_message(
+                event.reply_token,
+                [text_message])
+            return
+        else:
+            game.state = State.START
+
+    if game.state == State.SELECT_DIFFICULTY:
+        # ヘンテコミッションの難易度をセット
+        difficulty = event.postback.data
+        assert(game.mission_difficulty is None)
+        assert(difficulty == "easy" or difficulty == "hard")
+        game.mission_difficulty = difficulty
+
+        # message = "ゲームスタート！"
+        # text_message = TextSendMessage(text=message)
+        # line_bot_api.reply_message(
+        #     event.reply_token,
+        #     [text_message])
+        game.state = State.START
+
+    if game.state == State.START:
+        # ドリンクをシャッフルする
+        drink_ids = [0, 1]  # メロンとオレンジは確定
+        drink_ids.append(random.choice([2, 3]))  # ウーロンとジャスミンをランダムで選択
+        random.shuffle(drink_ids)  # ランダムに憑依
+
+        # シナリオをランダムに決定
+        game.random_init_scenario()
+
+        for i, user_id in enumerate(game.user_ids):
+            game.user_drinks[user_id] = drink_ids[i]
+            mission = scripts['mission'].iloc[drink_ids[i]]['mission']
+            game.user_missions[user_id] = mission
+
+            user_name = game.user_names[user_id]
+            drink_name = drink_names[game.user_drinks[user_id]]
+            message = f"あなた（{user_name}）に{drink_name}が乗り移ったぞ。\n"
+            message += f"{drink_name}のあなたは、{mission}\n"
+            if drink_ids[i] == 3:
+                message += f"へんてこミッション「{game.henteko}」\n"
+            if drink_ids[i] == 0:
+                chapon = game.scenario['ans' + str(game.chapon)]
+                message += f"メロンソーダのあなただけに、チャポンの選択肢が「{chapon}」であることを教えてあげるぞ。\n"
+            else:
+                message += f"チャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
+            message += f"これがミッションだ！"
+
+            # Do not send message to dummy users
+            if user_id == "0" or user_id == "1":
+                continue
+
+            # NOTICE: This consumes API call count
+            line_bot_api.push_message(
+                user_id, TextSendMessage(text=message))
+
+        # トークテーマ出題
+        game.selected_answer = None
+        question = game.scenario['question']
+        actions = []
+        for i in range(3):
+            answer = game.scenario['ans' + str(i)]
+            actions.append(PostbackAction(label=answer, data=i))
+
+        selection = ButtonsTemplate(text=question, actions=actions)
+        selection_message = TemplateSendMessage(
+            alt_text='トークテーマ答え選択肢', template=selection)
+
+        # Prepare image message
+        image_url = "https://github.com/wakwakcreate/drink_scripts/raw/main/countdown.gif"
+
+        image_message = ImageSendMessage(
+            original_content_url=image_url,
+            preview_image_url=image_url)
+
         line_bot_api.reply_message(
             event.reply_token,
-            [text_message])
+            [selection_message, image_message])
+
+        # State transition
+        game.state = State.JUDGE
 
     elif game.state == State.JUDGE:
         if game.selected_answer is None:
@@ -391,8 +439,8 @@ def handle_postback(event):
         # ゲーム続行 or リセットボタン メッセージ
         message = f"ゲームを続けますか？"
         actions = [
-            MessageAction(label="同じメンバーで続ける", text="続ける"),
-            PostbackAction(label="メンバーを変える", data="dummy"),
+            PostbackAction(label="同じメンバーで続ける", data="continue"),
+            PostbackAction(label="メンバーを変える", data="reset"),
         ]
         selection = ButtonsTemplate(text=message, actions=actions)
         selection_message = TemplateSendMessage(
@@ -407,6 +455,8 @@ def handle_postback(event):
 
         game.state = State.INIT
 
+    # Debug output
+    print("debug: handle_postback")
     game.print_state()
 
 
