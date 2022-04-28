@@ -305,8 +305,8 @@ def handle_postback(event):
                 continue
 
             # NOTICE: This consumes API call count
-            # line_bot_api.push_message(
-            #     user_id, TextSendMessage(text=message))
+            line_bot_api.push_message(
+                user_id, TextSendMessage(text=message))
 
         # トークテーマ出題
         game.selected_answer = None
