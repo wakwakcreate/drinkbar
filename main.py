@@ -1,5 +1,6 @@
 import os
 import random
+import enum
 import pandas as pd
 from flask import Flask, request, abort, g
 
@@ -16,23 +17,10 @@ from linebot.models import (
     PostbackAction, MessageAction
 )
 
-scripts = {}
-scenario_url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/scenario.csv"
-mission_url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/mission.csv"
-
-
-def load_scripts():
-    scenario = pd.read_csv(scenario_url)
-    mission = pd.read_csv(mission_url)
-    scripts['scenario'] = scenario
-    scripts['mission'] = mission
-
-
-load_scripts()
-
-
 app = Flask(__name__)
 
+# Load secret keys and setup LINE SDK
+# NOTICE: Do not embedded secrets here. Use env variables.
 YOUR_CHANNEL_ACCESS_TOKEN = os.environ["YOUR_CHANNEL_ACCESS_TOKEN"]
 YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 
@@ -40,25 +28,55 @@ line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
 # Constants
+# TODO: use enum
 drink_names = []
 drink_names.append("メロンソーダ")
 drink_names.append("オレンジジュース")
 drink_names.append("ウーロンチャ")
 drink_names.append("ジャスミンティ")
 
+# Load scripts from GitHub
+scripts = {}
+
+
+def load_scripts():
+    # お題の選択肢
+    url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/scenario.csv"
+    scripts['scenario'] = pd.read_csv(url)
+
+    # 個別に送るメッセージ
+    url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/mission.csv"
+    scripts['mission'] = pd.read_csv(url)
+
+    # ヘンテコミッション（easy, hard）
+    url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/easymission.csv"
+    scripts['easymission'] = pd.read_csv(url)
+    url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/hardmission.csv"
+    scripts['hardmission'] = pd.read_csv(url)
+
+
+load_scripts()
+
+
+class State(enum.Enum):
+    INIT = enum.auto(),
+    JUDGE = enum.auto(),
+    ANSWER = enum.auto(),
+    SELECT_DIFFICULTY = enum.auto(),
+
 
 class Game:
     def __init__(self, num_people=3):
-        self.state = 0
+        self.state = State.INIT
         self.num_people = num_people
         self.chapon = 0
         self.scenario = 0
         self.selected_answer = None
         self.selected_id = None
 
-        self.reset_user()
-    
-    def reset_user(self):
+        self.reset()
+
+    def reset(self):
         self.user_ids = set()
         self.user_names = {}
         self.user_drinks = {}
@@ -73,13 +91,17 @@ class Game:
         if self.num_people == 2:
             self.user_ids.add("1")
             self.user_names["1"] = "Bマン"
-    
+
+        self.mission_difficulty = None
+
     def random_init_scenario(self):
+        # シナリオ（お題）をランダムに決定
         scenarios = scripts['scenario']
         num_scenarios = len(scenarios.index)
         scenario_id = random.randint(0, num_scenarios - 1)
         self.scenario = scenarios.iloc[scenario_id]
-
+        # チャポンの選択肢をランダムに決定
+        self.chapon = random.randint(0, 2)
 
     def get_user_from_drink(self, drink_id):
         user_id = None
@@ -88,6 +110,7 @@ class Game:
                 user_id = k
         return user_id
 
+    # Only for debugging
     def print_state(self):
         print(f"{self.state=}")
         print(f"{self.num_people=}")
@@ -108,6 +131,7 @@ def get_games():
     return games
 
 
+# Main callback
 @ app.route("/", methods=['POST'])
 def callback():
     # get X-Line-Signature header value
@@ -127,6 +151,7 @@ def callback():
     return 'OK'
 
 
+# Message handler
 @ handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     source = event.source
@@ -157,7 +182,7 @@ def handle_message(event):
     # 既存の game 状態を取得
     game = games[group_id]
 
-    if game.state == 0:
+    if game.state == State.INIT:
         if len(game.user_ids) < 3:
             # ユーザーを3人確定する
 
@@ -171,6 +196,12 @@ def handle_message(event):
         if len(game.user_ids) == 3:
             # ユーザーが３人揃った場合
 
+            # ミッションの難易度を選択
+            # if game.mission_difficulty is None:
+
+            #     game.state = State.SELECT_DIFFICULTY
+            #     return
+
             # ドリンクをシャッフルする
             drink_ids = [0, 1]  # メロンとオレンジは確定
             drink_ids.append(random.choice([2, 3]))  # ウーロンとジャスミンをランダムで選択
@@ -178,9 +209,6 @@ def handle_message(event):
 
             # シナリオをランダムに決定
             game.random_init_scenario()
-
-            # チャポンの選択肢をランダムに決定
-            game.chapon = random.randint(0, 2)
 
             for i, user_id in enumerate(game.user_ids):
                 game.user_drinks[user_id] = drink_ids[i]
@@ -220,21 +248,22 @@ def handle_message(event):
 
             # Prepare image message
             image_url = "https://github.com/wakwakcreate/drink_scripts/raw/main/countdown.gif"
-            
+
             image_message = ImageSendMessage(
                 original_content_url=image_url,
-                preview_image_url=image_url)   
-        
+                preview_image_url=image_url)
+
             line_bot_api.reply_message(
                 event.reply_token,
                 [selection_message, image_message])
-            
+
             # State transition
-            game.state = 1
+            game.state = State.JUDGE
 
     game.print_state()
 
 
+# Postback handler
 @ handler.add(PostbackEvent)
 def handle_postback(event):
     source = event.source
@@ -246,9 +275,9 @@ def handle_postback(event):
     # 既存の game 状態を取得
     game = games[group_id]
 
-    if game.state == 0:
-        # ユーザーをリセット
-        game.reset_user()
+    if game.state == State.INIT:
+        # ゲームをリセット
+        game.reset()
 
         message = "参加したい3人が一言つぶやくとゲームがスタートするぞ。"
         text_message = TextSendMessage(text=message)
@@ -256,8 +285,7 @@ def handle_postback(event):
             event.reply_token,
             [text_message])
 
-
-    elif game.state == 1:
+    elif game.state == State.JUDGE:
         if game.selected_answer is None:
             game.selected_answer = event.postback.data
         else:
@@ -290,14 +318,14 @@ def handle_postback(event):
             [text_message, selection_message])
 
         # State transition
-        game.state = 2
+        game.state = State.ANSWER
 
-    elif game.state == 2:
+    elif game.state == State.ANSWER:
         # 答え合わせメッセージ表示フェーズ
 
-        #-----------------------------
+        # -----------------------------
         # 勝者決定
-        #-----------------------------
+        # -----------------------------
 
         # Get drink user id
         melon_id = game.get_user_from_drink(0)
@@ -326,9 +354,9 @@ def handle_postback(event):
             winner = 3
             image_name = "jasmine"
 
-        #-----------------------------
+        # -----------------------------
         # 各種メッセージを準備
-        #-----------------------------
+        # -----------------------------
 
         # 勝者ドリンクの写真メッセージ
         image_url = f"https://github.com/wakwakcreate/drink_scripts/blob/main/{image_name}.png?raw=true"
@@ -370,14 +398,14 @@ def handle_postback(event):
         selection_message = TemplateSendMessage(
             alt_text='ゲーム続行 or リセット', template=selection)
 
-        #-----------------------------
+        # -----------------------------
         # メッセージ送信
-        #-----------------------------
+        # -----------------------------
         line_bot_api.reply_message(
             event.reply_token,
             [image_message, text_message, selection_message])
 
-        game.state = 0
+        game.state = State.INIT
 
     game.print_state()
 
