@@ -51,22 +51,26 @@ class Game:
     def __init__(self, num_people=3):
         self.state = 0
         self.num_people = num_people
-        self.user_ids = set()
-        self.user_names = {}
-        self.user_drinks = {}
-        self.user_missions = {}
         self.chapon = 0
         self.scenario = 0
         self.selected_answer = None
         self.selected_id = None
 
+        self.reset_user()
+    
+    def reset_user(self):
+        self.user_ids = set()
+        self.user_names = {}
+        self.user_drinks = {}
+        self.user_missions = {}
+
         # Dummy users
-        if num_people == 1:
+        if self.num_people == 1:
             self.user_ids.add("0")
             self.user_names["0"] = "Aマン"
             self.user_ids.add("1")
             self.user_names["1"] = "Bマン"
-        if num_people == 2:
+        if self.num_people == 2:
             self.user_ids.add("1")
             self.user_names["1"] = "Bマン"
 
@@ -239,7 +243,18 @@ def handle_postback(event):
     # 既存の game 状態を取得
     game = games[group_id]
 
-    if game.state == 1:
+    if game.state == 0:
+        # ユーザーをリセット
+        game.reset_user()
+
+        message = "参加したい3人が一言つぶやくとゲームがスタートするぞ。"
+        text_message = TextSendMessage(text=message)
+        line_bot_api.reply_message(
+            event.reply_token,
+            [text_message])
+
+
+    elif game.state == 1:
         if game.selected_answer is None:
             game.selected_answer = event.postback.data
         else:
@@ -358,11 +373,6 @@ def handle_postback(event):
         line_bot_api.reply_message(
             event.reply_token,
             [image_message, text_message, selection_message])
-
-        game.state = 0
-
-    elif game.state == 2:
-        # ゲーム続行 or Reset
 
         game.state = 0
 
