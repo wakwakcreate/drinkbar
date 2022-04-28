@@ -73,6 +73,13 @@ class Game:
         if self.num_people == 2:
             self.user_ids.add("1")
             self.user_names["1"] = "Bマン"
+    
+    def random_init_scenario(self):
+        scenarios = scripts['scenario']
+        num_scenarios = len(scenarios.index)
+        scenario_id = random.randint(0, num_scenarios - 1)
+        self.scenario = scenarios.iloc[scenario_id]
+
 
     def get_user_from_drink(self, drink_id):
         user_id = None
@@ -170,11 +177,7 @@ def handle_message(event):
             random.shuffle(drink_ids)  # ランダムに憑依
 
             # シナリオをランダムに決定
-            scenarios = scripts['scenario']
-            num_scenarios = len(scenarios.index)
-            scenario_id = random.randint(0, num_scenarios - 1)
-            game.scenario = scenarios.iloc[scenario_id]
-            scenario = game.scenario
+            game.random_init_scenario()
 
             # チャポンの選択肢をランダムに決定
             game.chapon = random.randint(0, 2)
@@ -189,7 +192,7 @@ def handle_message(event):
                 message = f"あなた（{user_name}）に{drink_name}が乗り移ったぞ。\n"
                 message += f"{drink_name}のあなたは、{mission}\n"
                 if drink_ids[i] == 0:
-                    chapon = scenario['ans' + str(game.chapon)]
+                    chapon = game.scenario['ans' + str(game.chapon)]
                     message += f"メロンソーダのあなただけに、チャポンの選択肢が「{chapon}」であることを教えてあげるぞ。\n"
                 else:
                     message += f"チャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
@@ -205,10 +208,10 @@ def handle_message(event):
 
             # トークテーマ出題
             game.selected_answer = None
-            question = scenario['question']
+            question = game.scenario['question']
             actions = []
             for i in range(3):
-                answer = scenario['ans' + str(i)]
+                answer = game.scenario['ans' + str(i)]
                 actions.append(PostbackAction(label=answer, data=i))
 
             selection = ButtonsTemplate(text=question, actions=actions)
