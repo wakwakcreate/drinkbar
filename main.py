@@ -208,21 +208,17 @@ def handle_message(event):
             selection = ButtonsTemplate(text=question, actions=actions)
             selection_message = TemplateSendMessage(
                 alt_text='トークテーマ答え選択肢', template=selection)
+
+            # Prepare image message
+            image_url = "https://github.com/wakwakcreate/drink_scripts/raw/main/countdown.gif"
+            
+            image_message = ImageSendMessage(
+                original_content_url=image_url,
+                preview_image_url=image_url)   
+        
             line_bot_api.reply_message(
                 event.reply_token,
-                selection_message)
-            
-        #カウントダウンのGIF画像送信、まだうまくいってない↓↓↓↓↓↓↓↓↓↓↓↓    
-        # Prepare image message
-        image_url = "https://github.com/wakwakcreate/drink_scripts/blob/main/countdown.gif"
-        image_message = ImageSendMessage(
-            original_content_url=image_url,
-            preview_image_url=image_url)   
-        
-            line_bot_api.reply_message(event.reply_token,image_message)
-             #[image_message, text_message])
-           
-            #カウントダウンのGIF画像送信↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑event.reply_tokenがきたらimage_messageを返すだと思う
+                [selection_message, image_message])
             
             # State transition
             game.state = 1
