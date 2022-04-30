@@ -437,7 +437,8 @@ def handle_postback(event):
         if game.selected_id != "-1":
             user_name = game.user_names[game.selected_id]
         message += "\n選択されたユーザー:\n" + user_name
-        message += "\nへんてこミッション:\n" + game.henteko
+        if jasmine_id is not None:
+            message += "\nへんてこミッション:\n" + game.henteko
 
         text_message = TextSendMessage(text=message)
 
