@@ -296,7 +296,7 @@ def handle_postback(event):
                 message += f"\nへんてこミッション：『{game.henteko}』\n"
             if drink_ids[i] == 0:
                 chapon = game.scenario['ans' + str(game.chapon)]
-                message += f"\nメロンソーダのあなただけに、チャポンの選択肢が「{chapon}」であることを教えてあげるぞ。\n"
+                message += f"\nチャポンの選択肢は「{chapon}」だ。チャポンの選択肢が何かはあなただけしか知らないぞ。\n"
             else:
                 message += f"\nチャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
             #message += f"これが勝利条件だ！"
