@@ -388,6 +388,8 @@ def handle_postback(event):
 
         if event.postback.data != "-1":
             game.selected_id = event.postback.data
+        else:
+            game.selected_id = "-1"
 
         winner = None
         image_name = "draw"
