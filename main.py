@@ -290,15 +290,15 @@ def handle_postback(event):
             user_name = game.user_names[user_id]
             drink_name = drink_names[game.user_drinks[user_id]]
             message = f"あなた（{user_name}）に{drink_name}が乗り移ったぞ。\n"
-            message += f"{drink_name}のあなたは、{mission}\n"
+            message += f"\n{drink_name}のあなたは、{mission}\n"
             message += f"これが勝利条件だ！"
             if drink_ids[i] == 3:
-                message += f"へんてこミッション：『{game.henteko}』\n"
+                message += f"\nへんてこミッション：『{game.henteko}』\n"
             if drink_ids[i] == 0:
                 chapon = game.scenario['ans' + str(game.chapon)]
-                message += f"メロンソーダのあなただけに、チャポンの選択肢が「{chapon}」であることを教えてあげるぞ。\n"
+                message += f"\nメロンソーダのあなただけに、チャポンの選択肢が「{chapon}」であることを教えてあげるぞ。\n"
             else:
-                message += f"チャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
+                message += f"\nチャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
             #message += f"これが勝利条件だ！"
 
             # Do not send message to dummy users
