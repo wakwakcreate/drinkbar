@@ -212,7 +212,7 @@ def handle_message(event):
             if game.mission_difficulty is None:
                 message = f"最初にゲームの難易度を選ぼう。へんてこミッションに関係するよ。"
                 actions = [
-                    PostbackAction(label="微炭酸", data="easy"),
+                    PostbackAction(label="やさしい", data="easy"),
                     PostbackAction(label="強炭酸", data="hard"),
                 ]
                 selection = ButtonsTemplate(text=message, actions=actions)
