@@ -31,12 +31,14 @@ line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
 # Constants
+STATE_INIT = 0
 STATE_USER_SELECT = 10
 STATE_USER0_JOIN = 11
 STATE_USER1_JOIN = 12
 STATE_USER2_JOIN = 13
 STATE_DIFFICULTY_SELECTED = 20
 STATE_ANSWER_SELECTED = 30
+STATE_JASMINE_SELECTED = 40
 
 GAME_EASY = 0
 GAME_HARD = 1
@@ -79,6 +81,11 @@ def get_user_from_drink_id(game, group_id, drink_id, user_id_only=False):
             else:
                 user_name = get_user_name(group_id, user_id)
                 return user_id, user_name
+
+    if user_id_only:
+        return None
+    else:
+        return None, None
 
 
 scripts = {}
@@ -206,7 +213,20 @@ def handle_postback(event):
     game_str = event.postback.data
     game = json.loads(game_str)
 
-    if game['state'] == STATE_USER_SELECT:
+    if game['state'] == STATE_INIT:
+        game = {}
+        game['state'] = STATE_USER_SELECT
+        game['users'] = []
+        game_str = json.dumps(game)
+
+        text = "一人目の参加者はボタンを押してね。"
+        action = PostbackAction("参加", game_str)
+        selection = ButtonsTemplate(text, actions=[action])
+        selection_message = TemplateSendMessage(text, selection)
+
+        line_bot_api.reply_message(event.reply_token, selection_message)
+
+    elif game['state'] == STATE_USER_SELECT:
         game['users'].append({'id': user_id})
         game['state'] = STATE_USER0_JOIN
         game_str = json.dumps(game)
@@ -320,7 +340,7 @@ def handle_postback(event):
         for i in range(3):
             answer = scenario['answers'][i]
             next_game = copy.deepcopy(game)
-            next_game['ss_id'] = i # Selected Scenario id
+            next_game['sa_id'] = i # Selected Answer id
             next_game_str = json.dumps(next_game)
             actions.append(PostbackAction(answer, next_game_str))
 
@@ -341,8 +361,8 @@ def handle_postback(event):
 
         # 選択された答えの確認メッセージ
         scenario = scripts['scenarios'][game['s_id']]
-        selected_scenario_id = game['ss_id'] # Selected Scenario id
-        answer = scenario['answers'][selected_scenario_id]
+        selected_answer_id = game['sa_id'] # Selected Answer id
+        answer = scenario['answers'][selected_answer_id]
         message = f"{answer} が選択されたぞ。"
         text_message = TextSendMessage(message)
 
@@ -376,6 +396,106 @@ def handle_postback(event):
         line_bot_api.reply_message(
             event.reply_token,
             [text_message, selection_message])
+
+    elif game['state'] == STATE_ANSWER_SELECTED:
+        game['state'] = STATE_JASMINE_SELECTED
+        # 答え合わせメッセージ返信
+
+        # -----------------------------
+        # 勝者決定
+        # -----------------------------
+
+        # Get drink user id
+        melon_user_id = get_user_from_drink_id(game, group_id, DRINK_MELON, True)
+        orange_user_id = get_user_from_drink_id(game, group_id, DRINK_ORANGE, True)
+        oolong_user_id = get_user_from_drink_id(game, group_id, DRINK_OOLONG, True)
+        jasmine_user_id = get_user_from_drink_id(game, group_id, DRINK_JASMINE, True)
+
+        selected_user_idx = game['su_idx']
+        selected_user_id = None if selected_user_idx == -1 else game['users'][selected_user_idx]['id']
+
+        winner = None
+        image_name = "draw"
+        if game['sa_id'] == game['c_id']:
+            # Chapon is selected
+            winner = melon_user_id
+            image_name = "melon"
+        elif selected_user_id == jasmine_user_id:
+            winner = orange_user_id
+            image_name = "orange"
+        elif selected_user_id == melon_user_id and oolong_user_id is not None:
+            winner = oolong_user_id
+            image_name = "oolong"
+        elif selected_user_id != jasmine_user_id and jasmine_user_id is not None: # TODO: Work for jasmine_user_id == None?
+            winner = jasmine_user_id
+            image_name = "jasmine"
+
+        # -----------------------------
+        # 各種メッセージを準備
+        # -----------------------------
+
+        # 勝者ドリンクの写真メッセージ
+        image_url = f"https://github.com/wakwakcreate/drink_scripts/blob/main/{image_name}.png?raw=true"
+        image_message = ImageSendMessage(image_url, image_url)
+
+        # 答え合わせメッセージ
+        # 勝者
+        message = "答えあわせ:\n"
+        if winner is None:
+            message += "引き分け！\n"
+        else:
+            user_name = get_user_name(group_id, winner)
+            message += f"{user_name}の勝ち！\n"
+        # 配役
+        message += "\n配役:\n"
+        for user in game['users']:
+            user_id = user['id']
+            user_name = get_user_name(group_id, user_id)
+            drink_name = get_drink_name(user['drink'])
+            message += user_name + ": " + drink_name + "\n"
+        # チャポンの選択肢
+        scenario = scripts['scenarios'][game['s_id']]
+        chapon_answer = scenario['answers'][game['c_id']]
+        message += "\nチャポンの選択肢:\n" + chapon_answer
+        # 選択された選択肢
+        selected_answer = scenario['answers'][game['sa_id']]
+        message += "\n選択された選択肢:\n" + selected_answer
+        # 選択されたユーザー
+        selected_user_name = "いない"
+        if game['su_idx'] != -1:
+            selected_user_id = game['users'][game['su_idx']]['id']
+            selected_user_name = get_user_name(group_id, selected_user_id)
+        message += "\n選択されたユーザー:\n" + selected_user_name
+        # へんてこミッションの内容
+        if jasmine_user_id is not None:
+            hentekos = scripts['easy_missions'] if game['difficulty'] == GAME_EASY else scripts['hard_missions']
+            henteko = hentekos[game['h_id']]
+            message += "\nへんてこミッション:\n" + henteko
+
+        text_message = TextSendMessage(text=message)
+
+        # ゲーム続行 or リセットボタン メッセージ
+        message = f"ゲームを続けますか？"
+        game_continue = copy.deepcopy(game)
+        game_continue['state'] = STATE_USER2_JOIN
+        game_continue_str = json.dumps(game_continue)
+        game_reset = copy.deepcopy(game)
+        game_reset['state'] = STATE_INIT
+        game_reset_str = json.dumps(game_reset)
+
+        actions = [
+            PostbackAction("同じメンバーで続ける", game_continue_str),
+            PostbackAction("メンバーを変える", game_reset_str),
+        ]
+        selection = ButtonsTemplate(message, actions=actions)
+        selection_message = TemplateSendMessage(message, selection)
+
+        # -----------------------------
+        # メッセージ送信
+        # -----------------------------
+        line_bot_api.reply_message(
+            event.reply_token,
+            [image_message, text_message, selection_message])
 
 
 
