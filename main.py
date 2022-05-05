@@ -36,7 +36,7 @@ def get_drink_name(drink_id):
     if drink_id == DRINK_MELON:
         return "メロンソーダ"
     elif drink_id == DRINK_ORANGE:
-        return "オレンジソーダ"
+        return "オレンジジュース"
     elif drink_id == DRINK_OOLONG:
         return "ウーロン茶"
     elif drink_id == DRINK_JASMINE:
@@ -100,7 +100,7 @@ def reply_init_message(token):
     load_scripts()
 
     text = "一人目の参加者はボタンを押してね。"
-    game_str = create_game_str_with_change({}, 'state', STATE_USER_SELECT)
+    game_str = create_game_str_with_change({}, 'state', STATE_USER0_JOIN)
     action = PostbackAction("参加", game_str)
     selection = ButtonsTemplate(text, actions=[action])
     selection_message = TemplateSendMessage(text, selection)
@@ -111,7 +111,7 @@ def start_debug_mode(token):
     load_scripts()
 
     game = {}
-    game['state'] = STATE_USER1_JOIN
+    game['state'] = STATE_USER2_JOIN
     game['users'] = [
         {'id': DUMMY_USER_ID0}, 
         {'id': DUMMY_USER_ID1},
@@ -157,8 +157,8 @@ def handle_postback(event):
 
     reply_messages = []
 
-    if game['state'] == STATE_INIT:
-        game_str = create_game_str_with_change({}, 'state', STATE_USER_SELECT)
+    if game['state'] == STATE_USER_SELECT:
+        game_str = create_game_str_with_change({}, 'state', STATE_USER0_JOIN)
 
         text = "一人目の参加者はボタンを押してね。"
         action = PostbackAction("参加", game_str)
@@ -167,27 +167,11 @@ def handle_postback(event):
 
         reply_messages = [selection_message]
 
-    elif game['state'] == STATE_USER_SELECT:
-        game['users'] = [{'id': user_id}]
-        game_str = create_game_str_with_change(game, 'state', STATE_USER0_JOIN)
-
-        text = "二人目の参加者はボタンを押してね。"
-        action = PostbackAction("参加", game_str)
-        selection = ButtonsTemplate(text, actions=[action])
-        selection_message = TemplateSendMessage(text, selection)
-
-        reply_messages = [selection_message]
-
     elif game['state'] == STATE_USER0_JOIN:
-        # Ignore duplicate join button click
-        for user in game['users']:
-            if user['id'] == user_id:
-                return
-        
-        game['users'].append({'id': user_id})
+        game['users'] = [{'id': user_id}]
         game_str = create_game_str_with_change(game, 'state', STATE_USER1_JOIN)
 
-        text = "三人目の参加者はボタンを押してね。"
+        text = "二人目の参加者はボタンを押してね。"
         action = PostbackAction("参加", game_str)
         selection = ButtonsTemplate(text, actions=[action])
         selection_message = TemplateSendMessage(text, selection)
@@ -201,7 +185,23 @@ def handle_postback(event):
                 return
         
         game['users'].append({'id': user_id})
-        game['state'] = STATE_USER2_JOIN
+        game_str = create_game_str_with_change(game, 'state', STATE_USER2_JOIN)
+
+        text = "三人目の参加者はボタンを押してね。"
+        action = PostbackAction("参加", game_str)
+        selection = ButtonsTemplate(text, actions=[action])
+        selection_message = TemplateSendMessage(text, selection)
+
+        reply_messages = [selection_message]
+
+    elif game['state'] == STATE_USER2_JOIN:
+        # Ignore duplicate join button click
+        for user in game['users']:
+            if user['id'] == user_id:
+                return
+        
+        game['users'].append({'id': user_id})
+        game['state'] = STATE_DIFFICULTY_SELECTED
         game_easy_str = create_game_str_with_change(game, 'difficulty', GAME_EASY)
         game_hard_str = create_game_str_with_change(game, 'difficulty', GAME_HARD)
 
@@ -215,8 +215,8 @@ def handle_postback(event):
 
         reply_messages = [selection_message]
 
-    elif game['state'] == STATE_USER2_JOIN:
-        game['state'] = STATE_DIFFICULTY_SELECTED
+    elif game['state'] == STATE_DIFFICULTY_SELECTED:
+        game['state'] = STATE_ANSWER_SELECTED
 
         # ドリンクの配役をランダムに決定
         drinks = [DRINK_MELON, DRINK_ORANGE]
@@ -285,8 +285,8 @@ def handle_postback(event):
         # 返信メッセージ 
         reply_messages = [selection_message, image_message]
     
-    elif game['state'] == STATE_DIFFICULTY_SELECTED:
-        game['state'] = STATE_ANSWER_SELECTED
+    elif game['state'] == STATE_ANSWER_SELECTED:
+        game['state'] = STATE_JASMINE_SELECTED
 
         # 選択された答えの確認メッセージ
         scenario = scripts['scenarios'][game['s_id']]
@@ -316,8 +316,7 @@ def handle_postback(event):
         # 返信メッセージ 
         reply_messages = [text_message, selection_message]
 
-    elif game['state'] == STATE_ANSWER_SELECTED:
-        game['state'] = STATE_JASMINE_SELECTED
+    elif game['state'] == STATE_JASMINE_SELECTED:
         # 答え合わせメッセージ返信
 
         # -----------------------------
@@ -395,8 +394,8 @@ def handle_postback(event):
 
         # ゲーム続行 or リセットボタン メッセージ
         message = f"ゲームを続けますか？"
-        game_continue_str = create_game_str_with_change(game, 'state', STATE_USER2_JOIN)
-        game_reset_str = create_game_str_with_change(game, 'state', STATE_INIT)
+        game_continue_str = create_game_str_with_change(game, 'state', STATE_DIFFICULTY_SELECTED)
+        game_reset_str = create_game_str_with_change(game, 'state', STATE_USER_SELECT)
         actions = [
             PostbackAction("同じメンバーで続ける", game_continue_str),
             PostbackAction("メンバーを変える", game_reset_str),
