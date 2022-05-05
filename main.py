@@ -21,6 +21,7 @@ from linebot.models import (
 
 from constants import *
 from scripts import load_scripts, scripts
+from utils import get_drink_name
 
 app = Flask(__name__)
 
@@ -31,16 +32,6 @@ YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 
 line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
-
-def get_drink_name(drink_id):
-    if drink_id == DRINK_MELON:
-        return "メロンソーダ"
-    elif drink_id == DRINK_ORANGE:
-        return "オレンジジュース"
-    elif drink_id == DRINK_OOLONG:
-        return "ウーロン茶"
-    elif drink_id == DRINK_JASMINE:
-        return "ジャスミン茶"
 
 def get_user_name(group_id, user_id):
     # Dummy names
