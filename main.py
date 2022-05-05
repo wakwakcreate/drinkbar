@@ -1,7 +1,6 @@
 import os
 import random
 import json
-import copy
 
 from flask import Flask, request, abort, g
 
@@ -20,7 +19,8 @@ from linebot.models import (
 
 from .src.constants import *
 from .src.scripts import load_scripts, scripts
-from .src.utils import get_drink_name
+from .src.utils import get_drink_name, create_game_str_with_change
+from .src.transition import *
 
 app = Flask(__name__)
 
@@ -58,13 +58,6 @@ def get_user_from_drink_id(game, group_id, drink_id, user_id_only=False):
     else:
         return None, None
 
-def create_game_str_with_change(game, attribute, value):
-    new_game = copy.deepcopy(game)
-    new_game[attribute] = value
-    new_game_str = json.dumps(new_game)
-    new_game_str = new_game_str.replace(" ", "")
-    return new_game_str
-
 
 # Main callback
 # NOTICE: Do not edit this method
@@ -88,14 +81,8 @@ def callback():
 
 def reply_init_message(token):
     load_scripts()
-
-    text = "一人目の参加者はボタンを押してね。"
-    game_str = create_game_str_with_change({}, 'state', STATE_USER0_JOIN)
-    action = PostbackAction("参加", game_str)
-    selection = ButtonsTemplate(text, actions=[action])
-    selection_message = TemplateSendMessage(text, selection)
-
-    line_bot_api.reply_message(token, selection_message)
+    reply_messages = on_user_select()
+    line_bot_api.reply_message(token, reply_messages)
 
 def start_debug_mode(token):
     load_scripts()
@@ -148,14 +135,7 @@ def handle_postback(event):
     reply_messages = []
 
     if game['state'] == STATE_USER_SELECT:
-        game_str = create_game_str_with_change({}, 'state', STATE_USER0_JOIN)
-
-        text = "一人目の参加者はボタンを押してね。"
-        action = PostbackAction("参加", game_str)
-        selection = ButtonsTemplate(text, actions=[action])
-        selection_message = TemplateSendMessage(text, selection)
-
-        reply_messages = [selection_message]
+        reply_messages = on_user_select()
 
     elif game['state'] == STATE_USER0_JOIN:
         game['users'] = [{'id': user_id}]
