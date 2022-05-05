@@ -2,6 +2,7 @@ import os
 import random
 import enum
 import json
+import copy
 
 import pandas as pd
 from flask import Flask, request, abort, g
@@ -33,6 +34,9 @@ STATE_USER_SELECT = 10
 STATE_USER0_JOIN = 11
 STATE_USER1_JOIN = 12
 STATE_USER2_JOIN = 13
+
+GAME_EASY = 0
+GAME_HARD = 1
 
 # Constants
 c = {
@@ -169,9 +173,24 @@ def handle_postback(event):
         
         game['user_ids'].append(user_id)
         game['state'] = STATE_USER2_JOIN
-        game_str = json.dumps(game)
 
-        print("ok")
+        game_easy = copy.deepcopy(game)
+        game_easy['difficulty'] = GAME_EASY
+        game_easy_str = json.dumps(game_easy)
+
+        game_hard = copy.deepcopy(game)
+        game_hard['difficulty'] = GAME_HARD
+        game_hard_str = json.dumps(game_hard)
+
+        text = "最初にゲームの難易度を選ぼう。へんてこミッションに関係するよ。"
+        actions = [
+            PostbackAction("微炭酸", game_easy_str),
+            PostbackAction("強炭酸", game_hard_str),
+        ]
+        selection = ButtonsTemplate(text, actions=actions)
+        selection_message = TemplateSendMessage(text, selection)
+
+        line_bot_api.reply_message(event.reply_token, selection_message)
 
 if __name__ == "__main__":
     load_scripts()
