@@ -64,7 +64,7 @@ def on_user2_join(game, user_id):
 
     text = "最初にゲームの難易度を選ぼう。へんてこミッションに関係するよ。"
     actions = [
-        PostbackAction("微炭酸", game_easy_str),
+        PostbackAction("やさしい", game_easy_str),
         PostbackAction("強炭酸", game_hard_str),
     ]
     selection = ButtonsTemplate(text, actions=actions)
