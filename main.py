@@ -87,6 +87,12 @@ def get_user_from_drink_id(game, group_id, drink_id, user_id_only=False):
     else:
         return None, None
 
+def create_game_str_with_change(game, attribute, value):
+    new_game = copy.deepcopy(game)
+    new_game[attribute] = value
+    new_game_str = json.dumps(new_game)
+    new_game_str = new_game_str.replace(" ", "")
+    return new_game_str
 
 scripts = {}
 
@@ -264,13 +270,8 @@ def handle_postback(event):
         game['users'].append({'id': user_id})
         game['state'] = STATE_USER2_JOIN
 
-        game_easy = copy.deepcopy(game)
-        game_easy['difficulty'] = GAME_EASY
-        game_easy_str = json.dumps(game_easy)
-
-        game_hard = copy.deepcopy(game)
-        game_hard['difficulty'] = GAME_HARD
-        game_hard_str = json.dumps(game_hard)
+        game_easy_str = create_game_str_with_change(game, 'difficulty', GAME_EASY)
+        game_hard_str = create_game_str_with_change(game, 'difficulty', GAME_HARD)
 
         text = "最初にゲームの難易度を選ぼう。へんてこミッションに関係するよ。"
         actions = [
@@ -339,9 +340,7 @@ def handle_postback(event):
         actions = []
         for i in range(3):
             answer = scenario['answers'][i]
-            next_game = copy.deepcopy(game)
-            next_game['sa_id'] = i # Selected Answer id
-            next_game_str = json.dumps(next_game)
+            next_game_str = create_game_str_with_change(game, 'sa_id', i)
             actions.append(PostbackAction(answer, next_game_str))
 
         selection = ButtonsTemplate(question, actions=actions)
@@ -376,17 +375,9 @@ def handle_postback(event):
             if user_id == orange_user_id:
                 continue
             user_name = get_user_name(group_id, user_id)
-
-            next_game = copy.deepcopy(game)
-            next_game['su_idx'] = idx # Selected User idx
-            next_game_str = json.dumps(next_game)
-            next_game_str = next_game_str.replace(" ", "") # TODO
-
+            next_game_str = create_game_str_with_change(game, 'su_idx', idx)
             actions.append(PostbackAction(user_name, next_game_str))
-
-        next_game = copy.deepcopy(game)
-        next_game['su_idx'] = -1 # Selected User idx
-        next_game_str = json.dumps(next_game)
+        next_game_str = create_game_str_with_change(game, 'su_idx', -1)
         actions.append(PostbackAction(label='いない', data=next_game_str))
 
         selection = ButtonsTemplate(message, actions=actions)
@@ -476,13 +467,8 @@ def handle_postback(event):
 
         # ゲーム続行 or リセットボタン メッセージ
         message = f"ゲームを続けますか？"
-        game_continue = copy.deepcopy(game)
-        game_continue['state'] = STATE_USER2_JOIN
-        game_continue_str = json.dumps(game_continue)
-        game_reset = copy.deepcopy(game)
-        game_reset['state'] = STATE_INIT
-        game_reset_str = json.dumps(game_reset)
-
+        game_continue_str = create_game_str_with_change(game, 'state', STATE_USER2_JOIN)
+        game_reset_str = create_game_str_with_change(game, 'state', STATE_INIT)
         actions = [
             PostbackAction("同じメンバーで続ける", game_continue_str),
             PostbackAction("メンバーを変える", game_reset_str),
