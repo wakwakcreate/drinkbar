@@ -50,3 +50,24 @@ def on_user1_join(game, user_id):
     selection_message = TemplateSendMessage(text, selection)
 
     return [selection_message]
+
+def on_user2_join(game, user_id):
+    # Ignore duplicate join button click
+    for user in game['users']:
+        if user['id'] == user_id:
+            return None
+    
+    game['users'].append({'id': user_id})
+    game['state'] = STATE_DIFFICULTY_SELECTED
+    game_easy_str = create_game_str_with_change(game, 'difficulty', GAME_EASY)
+    game_hard_str = create_game_str_with_change(game, 'difficulty', GAME_HARD)
+
+    text = "最初にゲームの難易度を選ぼう。へんてこミッションに関係するよ。"
+    actions = [
+        PostbackAction("微炭酸", game_easy_str),
+        PostbackAction("強炭酸", game_hard_str),
+    ]
+    selection = ButtonsTemplate(text, actions=actions)
+    selection_message = TemplateSendMessage(text, selection)
+
+    return [selection_message]

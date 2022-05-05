@@ -15,5 +15,7 @@ DRINK_ORANGE = 1
 DRINK_OOLONG = 2
 DRINK_JASMINE = 3
 
+# For test and debug use only
 DUMMY_USER_ID0 = 'Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 DUMMY_USER_ID1 = 'Uyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
+DUMMY_USER_ID2 = 'Uzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz'

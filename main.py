@@ -144,25 +144,7 @@ def handle_postback(event):
         reply_messages = on_user1_join(game, user_id)
 
     elif game['state'] == STATE_USER2_JOIN:
-        # Ignore duplicate join button click
-        for user in game['users']:
-            if user['id'] == user_id:
-                return
-        
-        game['users'].append({'id': user_id})
-        game['state'] = STATE_DIFFICULTY_SELECTED
-        game_easy_str = create_game_str_with_change(game, 'difficulty', GAME_EASY)
-        game_hard_str = create_game_str_with_change(game, 'difficulty', GAME_HARD)
-
-        text = "最初にゲームの難易度を選ぼう。へんてこミッションに関係するよ。"
-        actions = [
-            PostbackAction("微炭酸", game_easy_str),
-            PostbackAction("強炭酸", game_hard_str),
-        ]
-        selection = ButtonsTemplate(text, actions=actions)
-        selection_message = TemplateSendMessage(text, selection)
-
-        reply_messages = [selection_message]
+        reply_messages = on_user2_join(game, user_id)
 
     elif game['state'] == STATE_DIFFICULTY_SELECTED:
         game['state'] = STATE_ANSWER_SELECTED
