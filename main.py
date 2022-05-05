@@ -141,20 +141,7 @@ def handle_postback(event):
         reply_messages = on_user0_join(game, user_id)
 
     elif game['state'] == STATE_USER1_JOIN:
-        # Ignore duplicate join button click
-        for user in game['users']:
-            if user['id'] == user_id:
-                return
-        
-        game['users'].append({'id': user_id})
-        game_str = create_game_str_with_change(game, 'state', STATE_USER2_JOIN)
-
-        text = "三人目の参加者はボタンを押してね。"
-        action = PostbackAction("参加", game_str)
-        selection = ButtonsTemplate(text, actions=[action])
-        selection_message = TemplateSendMessage(text, selection)
-
-        reply_messages = [selection_message]
+        reply_messages = on_user1_join(game, user_id)
 
     elif game['state'] == STATE_USER2_JOIN:
         # Ignore duplicate join button click
