@@ -172,3 +172,92 @@ def on_answer_selected(api, game, group_id, scripts):
     selection_message = TemplateSendMessage(message, selection)
 
     return [text_message, selection_message]
+
+def on_jasmine_selected(api, game, group_id, scripts):
+    # 答え合わせメッセージ返信
+
+    # -----------------------------
+    # 勝者決定
+    # -----------------------------
+
+    # Get drink user id
+    melon_user_id = get_user_from_drink_id(api, game, group_id, DRINK_MELON, True)
+    orange_user_id = get_user_from_drink_id(api, game, group_id, DRINK_ORANGE, True)
+    oolong_user_id = get_user_from_drink_id(api, game, group_id, DRINK_OOLONG, True)
+    jasmine_user_id = get_user_from_drink_id(api, game, group_id, DRINK_JASMINE, True)
+
+    selected_user_idx = game['su_idx']
+    selected_user_id = None if selected_user_idx == -1 else game['users'][selected_user_idx]['id']
+
+    winner = None
+    image_name = "draw"
+    if game['sa_id'] == game['c_id']:
+        # Chapon is selected
+        winner = melon_user_id
+        image_name = "melon"
+    elif selected_user_id == jasmine_user_id:
+        winner = orange_user_id
+        image_name = "orange"
+    elif selected_user_id == melon_user_id and oolong_user_id is not None:
+        winner = oolong_user_id
+        image_name = "oolong"
+    elif selected_user_id != jasmine_user_id and jasmine_user_id is not None: # TODO: Work for jasmine_user_id == None?
+        winner = jasmine_user_id
+        image_name = "jasmine"
+
+    # -----------------------------
+    # 各種メッセージを準備
+    # -----------------------------
+
+    # 勝者ドリンクの写真メッセージ
+    image_url = f"https://github.com/wakwakcreate/drink_scripts/blob/main/{image_name}.png?raw=true"
+    image_message = ImageSendMessage(image_url, image_url)
+
+    # 答え合わせメッセージ
+    # 勝者
+    message = "答えあわせ:\n"
+    if winner is None:
+        message += "引き分け！\n"
+    else:
+        user_name = get_user_name(api, group_id, winner)
+        message += f"{user_name}の勝ち！\n"
+    # 配役
+    message += "\n配役:\n"
+    for user in game['users']:
+        user_id = user['id']
+        user_name = get_user_name(api, group_id, user_id)
+        drink_name = get_drink_name(user['drink'])
+        message += user_name + ": " + drink_name + "\n"
+    # チャポンの選択肢
+    scenario = scripts['scenarios'][game['s_id']]
+    chapon_answer = scenario['answers'][game['c_id']]
+    message += "\nチャポンの選択肢:\n" + chapon_answer
+    # 選択された選択肢
+    selected_answer = scenario['answers'][game['sa_id']]
+    message += "\n選択された選択肢:\n" + selected_answer
+    # 選択されたユーザー
+    selected_user_name = "いない"
+    if game['su_idx'] != -1:
+        selected_user_id = game['users'][game['su_idx']]['id']
+        selected_user_name = get_user_name(api, group_id, selected_user_id)
+    message += "\n選択されたユーザー:\n" + selected_user_name
+    # へんてこミッションの内容
+    if jasmine_user_id is not None:
+        hentekos = scripts['easy_missions'] if game['difficulty'] == GAME_EASY else scripts['hard_missions']
+        henteko = hentekos[game['h_id']]
+        message += "\nへんてこミッション:\n" + henteko
+
+    text_message = TextSendMessage(text=message)
+
+    # ゲーム続行 or リセットボタン メッセージ
+    message = f"ゲームを続けますか？"
+    game_continue_str = create_game_str_with_change(game, 'state', STATE_DIFFICULTY_SELECTED)
+    game_reset_str = create_game_str_with_change(game, 'state', STATE_USER_SELECT)
+    actions = [
+        PostbackAction("同じメンバーで続ける", game_continue_str),
+        PostbackAction("メンバーを変える", game_reset_str),
+    ]
+    selection = ButtonsTemplate(message, actions=actions)
+    selection_message = TemplateSendMessage(message, selection)
+
+    return [image_message, text_message, selection_message]

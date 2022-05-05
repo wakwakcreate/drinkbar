@@ -246,4 +246,58 @@ def test_on_answer_selected(difficulty, user_drinks, s_id, c_id, h_id, sa_id):
         assert(next_game['su_idx'] in [0, 1, 2])
         assert(orange_user_id != game['users'][next_game['su_idx']]['id'])
 
+        assert(STATE_JASMINE_SELECTED == next_game['state'])
+
         # TODO: More complicated tests are needed
+
+@pytest.mark.parametrize("difficulty", [GAME_EASY, GAME_HARD])
+@pytest.mark.parametrize("user_drinks", itertools.permutations(DRINK_LIST))
+@pytest.mark.parametrize("s_id", [0, 3])
+@pytest.mark.parametrize("c_id", [0, 1, 2])
+@pytest.mark.parametrize("h_id", [0, 3])
+@pytest.mark.parametrize("sa_id", [0])
+@pytest.mark.parametrize("su_idx", [0, 1, 2])
+def test_on_jasmine_selected(difficulty, user_drinks, s_id, c_id, h_id, sa_id, su_idx):
+    # Orange and Melon are always exists
+    if user_drinks[3] == DRINK_ORANGE or user_drinks[3] == DRINK_MELON:
+        pytest.skip('Orange and Melon are always exists')
+    
+    game = {
+        'state': STATE_JASMINE_SELECTED,
+        'difficulty': difficulty,
+        'users': [
+            {'id': DUMMY_USER_ID0, 'drink': user_drinks[0]},
+            {'id': DUMMY_USER_ID1, 'drink': user_drinks[1]},
+            {'id': DUMMY_USER_ID2, 'drink': user_drinks[2]},
+        ],
+        's_id': s_id,
+        'c_id': c_id,
+        'h_id': h_id,
+        'sa_id': sa_id,
+        'su_idx': su_idx,
+    }
+    
+    api = DummyAPI()
+    group_id = None # TODO: Create dummy_group_id?
+    scripts = dummy_scripts
+
+    reply_messages = on_jasmine_selected(api, game, group_id, scripts)
+
+    assert(len(reply_messages) == 3)
+
+    assert(isinstance(reply_messages[0], ImageSendMessage))
+    assert(isinstance(reply_messages[1], TextSendMessage))
+    assert(isinstance(reply_messages[2], TemplateSendMessage))
+
+    actions = reply_messages[2].template.actions
+    assert(len(actions) == 2)
+
+    next_game_str = actions[0].data
+    next_game = json.loads(next_game_str)
+    assert(STATE_DIFFICULTY_SELECTED == next_game['state'])
+
+    next_game_str = actions[1].data
+    next_game = json.loads(next_game_str)
+    assert(STATE_USER_SELECT == next_game['state'])
+
+    # TODO: More complicated tests are needed
