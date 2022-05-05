@@ -40,3 +40,21 @@ def load_scripts():
     scripts['hard_missions'] = hard_missions
 
     print("Scripts loaded.")
+
+dummy_scripts = {
+    'scenarios': [
+        {'question': 'q0', 'answers': ['a0', 'a1', 'a2']}
+    ],
+    'missions': [
+        'Missions for melon',
+        'Missions for orange',
+        'Missions for oolong',
+        'Missions for jasmine',
+    ],
+    'easy_missions': [
+        'Easy mission 0'
+    ],
+    'hard_missions': [
+        'Hard mission 0'
+    ]
+}

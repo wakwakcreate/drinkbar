@@ -1,5 +1,4 @@
 import os
-import random
 import json
 
 from flask import Flask, request, abort, g
@@ -19,7 +18,7 @@ from linebot.models import (
 
 from .src.constants import *
 from .src.scripts import load_scripts, scripts
-from .src.utils import get_drink_name, create_game_str_with_change
+from .src.utils import get_drink_name, create_game_str_with_change, get_user_name, get_user_from_drink_id
 from .src.transition import *
 
 app = Flask(__name__)
@@ -31,33 +30,6 @@ YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 
 line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
-
-def get_user_name(group_id, user_id):
-    # Dummy names
-    if user_id == DUMMY_USER_ID0:
-        return "Aマン"
-    if user_id == DUMMY_USER_ID1:
-        return "Bマン"
-    
-    # Get user name via LINE API
-    profile = line_bot_api.get_group_member_profile(group_id, user_id)
-    return profile.display_name
-
-def get_user_from_drink_id(game, group_id, drink_id, user_id_only=False):
-    for user in game['users']:
-        if user['drink'] == drink_id:
-            user_id = user['id']
-            if user_id_only:
-                return user_id
-            else:
-                user_name = get_user_name(group_id, user_id)
-                return user_id, user_name
-
-    if user_id_only:
-        return None
-    else:
-        return None, None
-
 
 # Main callback
 # NOTICE: Do not edit this method
@@ -147,74 +119,7 @@ def handle_postback(event):
         reply_messages = on_user2_join(game, user_id)
 
     elif game['state'] == STATE_DIFFICULTY_SELECTED:
-        game['state'] = STATE_ANSWER_SELECTED
-
-        # ドリンクの配役をランダムに決定
-        drinks = [DRINK_MELON, DRINK_ORANGE]
-        drinks.append(random.choice([DRINK_OOLONG, DRINK_JASMINE]))
-        random.shuffle(drinks)
-        for idx, user in enumerate(game['users']):
-            user['drink'] = drinks[idx]
-
-        # お題をランダムに決定
-        scenarios = scripts['scenarios']
-        scenario_id = random.randint(0, len(scenarios) - 1)
-        game['s_id'] = scenario_id
-
-        # チャポンの選択肢をランダムに決定
-        game['c_id'] = random.randint(0, 2)
-
-        # へんてこミッションをランダムに決定
-        hentekos = scripts['easy_missions'] if game['difficulty'] == GAME_EASY else scripts['hard_missions']
-        henteko_id = random.randint(0, len(hentekos) - 1)
-        game['h_id'] = henteko_id
-
-        # 個別メッセージを送信
-        for user in game['users']:
-            user_id = user['id']
-            user_name = get_user_name(group_id, user_id)
-            drink_id = user['drink']
-            drink_name = get_drink_name(user['drink'])
-            mission = scripts['missions'][drink_id]
-
-            message = f"あなた（{user_name}）に{drink_name}が乗り移ったぞ。\n"
-            message += f"\n{drink_name}のあなたは、{mission}\n"
-            message += f"これが勝利条件だ！"
-            if drink_id == DRINK_JASMINE:
-                message += f"\nへんてこミッション：『{hentekos[henteko_id]}』\n"
-            if drink_id == DRINK_MELON:
-                answers = scenarios[scenario_id]['answers']
-                chapon_ans = answers[game['c_id']]
-                message += f"\nチャポンの選択肢は「{chapon_ans}」だ。チャポンの選択肢が何かはあなたしか知らないぞ。\n"
-            else:
-                message += f"\nチャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
-
-            # Do not send message to dummy users
-            if user_id == DUMMY_USER_ID0 or user_id == DUMMY_USER_ID1:
-                continue
-
-            # NOTICE: This consumes API call count
-            line_bot_api.push_message(
-                user_id, TextSendMessage(text=message))
-        
-        # お題選択肢ボタンメッセージ
-        scenario = scenarios[scenario_id]
-        question = scenario['question']
-        actions = []
-        for i in range(3):
-            answer = scenario['answers'][i]
-            next_game_str = create_game_str_with_change(game, 'sa_id', i)
-            actions.append(PostbackAction(answer, next_game_str))
-
-        selection = ButtonsTemplate(question, actions=actions)
-        selection_message = TemplateSendMessage(question, selection)
-
-        # カウントダウン画像メッセージ
-        image_url = "https://github.com/wakwakcreate/drink_scripts/raw/main/countdown.gif"
-        image_message = ImageSendMessage(image_url, image_url)
-
-        # 返信メッセージ 
-        reply_messages = [selection_message, image_message]
+        reply_messages = on_difficulty_selected(line_bot_api, game, group_id, scripts)
     
     elif game['state'] == STATE_ANSWER_SELECTED:
         game['state'] = STATE_JASMINE_SELECTED
@@ -227,7 +132,7 @@ def handle_postback(event):
         text_message = TextSendMessage(message)
 
         # ジャスミンティ選択メッセージ
-        orange_user_id, orange_user_name = get_user_from_drink_id(game, group_id, DRINK_ORANGE)
+        orange_user_id, orange_user_name = get_user_from_drink_id(line_bot_api, game, group_id, DRINK_ORANGE)
         message = f"オレンジジュースの{orange_user_name}さん、ジャスミンティがいるか推理し、1つ選ぼう"
         actions = []
         for idx, user in enumerate(game['users']):
@@ -235,7 +140,7 @@ def handle_postback(event):
             # Ignore self
             if user_id == orange_user_id:
                 continue
-            user_name = get_user_name(group_id, user_id)
+            user_name = get_user_name(line_bot_api, group_id, user_id)
             next_game_str = create_game_str_with_change(game, 'su_idx', idx)
             actions.append(PostbackAction(user_name, next_game_str))
         next_game_str = create_game_str_with_change(game, 'su_idx', -1)
@@ -255,10 +160,10 @@ def handle_postback(event):
         # -----------------------------
 
         # Get drink user id
-        melon_user_id = get_user_from_drink_id(game, group_id, DRINK_MELON, True)
-        orange_user_id = get_user_from_drink_id(game, group_id, DRINK_ORANGE, True)
-        oolong_user_id = get_user_from_drink_id(game, group_id, DRINK_OOLONG, True)
-        jasmine_user_id = get_user_from_drink_id(game, group_id, DRINK_JASMINE, True)
+        melon_user_id = get_user_from_drink_id(line_bot_api, game, group_id, DRINK_MELON, True)
+        orange_user_id = get_user_from_drink_id(line_bot_api, game, group_id, DRINK_ORANGE, True)
+        oolong_user_id = get_user_from_drink_id(line_bot_api, game, group_id, DRINK_OOLONG, True)
+        jasmine_user_id = get_user_from_drink_id(line_bot_api, game, group_id, DRINK_JASMINE, True)
 
         selected_user_idx = game['su_idx']
         selected_user_id = None if selected_user_idx == -1 else game['users'][selected_user_idx]['id']
@@ -293,13 +198,13 @@ def handle_postback(event):
         if winner is None:
             message += "引き分け！\n"
         else:
-            user_name = get_user_name(group_id, winner)
+            user_name = get_user_name(line_bot_api, group_id, winner)
             message += f"{user_name}の勝ち！\n"
         # 配役
         message += "\n配役:\n"
         for user in game['users']:
             user_id = user['id']
-            user_name = get_user_name(group_id, user_id)
+            user_name = get_user_name(line_bot_api, group_id, user_id)
             drink_name = get_drink_name(user['drink'])
             message += user_name + ": " + drink_name + "\n"
         # チャポンの選択肢
@@ -313,7 +218,7 @@ def handle_postback(event):
         selected_user_name = "いない"
         if game['su_idx'] != -1:
             selected_user_id = game['users'][game['su_idx']]['id']
-            selected_user_name = get_user_name(group_id, selected_user_id)
+            selected_user_name = get_user_name(line_bot_api, group_id, selected_user_id)
         message += "\n選択されたユーザー:\n" + selected_user_name
         # へんてこミッションの内容
         if jasmine_user_id is not None:

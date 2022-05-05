@@ -1,9 +1,6 @@
-from ..src.scripts import load_scripts, scripts
+from ..src.scripts import load_scripts, scripts, dummy_scripts
 
-def test_load_scripts():
-    # Load check
-    load_scripts()
-
+def check_scripts(scripts):
     # Key check
     assert('scenarios' in scripts)
     assert('missions' in scripts)
@@ -38,4 +35,10 @@ def test_load_scripts():
     for mission in hard_missions:
         assert(isinstance(mission, str))
 
+
+def test_scripts():
+    load_scripts()
+    check_scripts(scripts)
     
+def test_dummy_scripts():
+    check_scripts(dummy_scripts)

@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -14,6 +15,8 @@ from linebot.models import (
 )
 
 from ..src.transition import *
+from ..src.utils import DummyAPI
+from ..src.scripts import dummy_scripts
 
 def test_on_user_select():
     reply_messages = on_user_select()
@@ -148,3 +151,49 @@ def test_on_user2_join():
 
     reply_messages = on_user1_join(game, DUMMY_USER_ID1)
     assert(reply_messages is None)
+
+@pytest.mark.parametrize("difficulty", [GAME_EASY, GAME_HARD])
+def test_on_difficulty_selected(difficulty):
+    game = {
+        'state': STATE_USER2_JOIN,
+        'difficulty': difficulty,
+        'users': [
+            {'id': DUMMY_USER_ID0},
+            {'id': DUMMY_USER_ID1},
+            {'id': DUMMY_USER_ID2},
+        ]
+    }
+
+    api = DummyAPI()
+    group_id = None # TODO: Create dummy_group_id?
+    scripts = dummy_scripts
+
+    reply_messages = on_difficulty_selected(api, game, group_id, scripts)
+
+    assert(len(reply_messages) == 2)
+
+    assert(isinstance(reply_messages[0], TemplateSendMessage))
+    assert(isinstance(reply_messages[1], ImageSendMessage))
+
+    actions = reply_messages[0].template.actions
+    assert(len(actions) == 3)
+
+    for i in range(3):
+        next_game_str = actions[i].data
+        next_game = json.loads(next_game_str)
+
+        s_id = next_game['s_id']
+        assert(0 <= s_id and s_id < len(scripts['scenarios']))
+
+        c_id = next_game['c_id']
+        assert(c_id in [0, 1, 2])
+
+        h_id = next_game['h_id']
+        hentekos = scripts['easy_missions'] if difficulty else scripts['hard_missions']
+        assert(0 <= h_id and h_id < len(hentekos))
+
+        sa_id = next_game['sa_id']
+        assert(sa_id == i)
+
+        assert(next_game['state'] == STATE_ANSWER_SELECTED)
+
