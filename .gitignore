@@ -1,0 +1,5 @@
+/venv
+launch.sh
+*.log
+__pycache__
+.pytest_cache
