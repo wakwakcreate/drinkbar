@@ -32,7 +32,8 @@ TOKEN や SECRET は LINE Developers にログインして確認。
 export YOUR_CHANNEL_ACCESS_TOKEN="****************************************************************************************************************************************************************************"
 export YOUR_CHANNEL_SECRET="********************************"
 export FLASK_APP="./main.py"
-flask run --debugger --reload
+date_time=`date +%Y%m%d-%H%M%S`
+flask run --debugger --reload &> $date_time".log"
 ```
 
 ### テスト
@@ -43,7 +44,7 @@ $ pytest test
 
 ### webhook として使えるようにする方法
 
-yusha_no_koushin をグローバルへ出すには [ngrok](https://ngrok.com/) を使うと楽。
+グローバルへ出すには [ngrok](https://ngrok.com/) を使うと楽。
 上記 flask run が 5000 番ポートを開けた場合の例。
 
 ```sh
