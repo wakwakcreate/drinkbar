@@ -201,7 +201,7 @@ def handle_message(event):
     group_id = source.group_id
 
     # デバッグコマンドを処理
-    if event.message.text == "i":
+    if event.message.text == "i" or event.message.text == "スタート":
         reply_init_message(event.reply_token, group_id)
         return
     
