@@ -1,4 +1,4 @@
-from ..scripts import load_scripts, scripts
+from ..src.scripts import load_scripts, scripts
 
 def test_load_scripts():
     # Load check

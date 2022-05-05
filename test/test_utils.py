@@ -1,5 +1,5 @@
-from ..constants import *
-from ..utils import get_drink_name
+from ..src.constants import *
+from ..src.utils import get_drink_name
 
 def test_get_drink_name():
     assert("メロンソーダ" == get_drink_name(DRINK_MELON))

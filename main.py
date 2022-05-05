@@ -1,6 +1,5 @@
 import os
 import random
-import enum
 import json
 import copy
 
@@ -16,12 +15,12 @@ from linebot.models import (
     JoinEvent, MessageEvent, PostbackEvent,
     TextMessage, TextSendMessage, ImageSendMessage, TemplateSendMessage,
     ButtonsTemplate,
-    PostbackAction, MessageAction
+    PostbackAction
 )
 
-from constants import *
-from scripts import load_scripts, scripts
-from utils import get_drink_name
+from .src.constants import *
+from .src.scripts import load_scripts, scripts
+from .src.utils import get_drink_name
 
 app = Flask(__name__)
 

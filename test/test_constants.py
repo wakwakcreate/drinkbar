@@ -1,4 +1,4 @@
-from ..constants import *
+from ..src.constants import *
 
 def test_drinks():
     assert(DRINK_MELON == 0)
