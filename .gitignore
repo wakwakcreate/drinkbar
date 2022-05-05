@@ -1,2 +1,4 @@
 /venv
 launch.sh
+*.log
+__pycache__

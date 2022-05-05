@@ -4,7 +4,6 @@ import enum
 import json
 import copy
 
-import pandas as pd
 from flask import Flask, request, abort, g
 
 from linebot import (
@@ -20,6 +19,9 @@ from linebot.models import (
     PostbackAction, MessageAction
 )
 
+from constants import *
+from scripts import load_scripts, scripts
+
 app = Flask(__name__)
 
 # Load secret keys and setup LINE SDK
@@ -29,27 +31,6 @@ YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 
 line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
-
-# Constants
-STATE_INIT = 0
-STATE_USER_SELECT = 10
-STATE_USER0_JOIN = 11
-STATE_USER1_JOIN = 12
-STATE_USER2_JOIN = 13
-STATE_DIFFICULTY_SELECTED = 20
-STATE_ANSWER_SELECTED = 30
-STATE_JASMINE_SELECTED = 40
-
-GAME_EASY = 0
-GAME_HARD = 1
-
-DRINK_MELON = 0
-DRINK_ORANGE = 1
-DRINK_OOLONG = 2
-DRINK_JASMINE = 3
-
-DUMMY_USER_ID0 = 'Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-DUMMY_USER_ID1 = 'Uyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy'
 
 def get_drink_name(drink_id):
     if drink_id == DRINK_MELON:
@@ -93,47 +74,6 @@ def create_game_str_with_change(game, attribute, value):
     new_game_str = json.dumps(new_game)
     new_game_str = new_game_str.replace(" ", "")
     return new_game_str
-
-scripts = {}
-
-def load_scripts():
-    # お題の選択肢
-    url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/scenario.csv"
-    scenarios_csv = pd.read_csv(url)
-    scenarios = []
-    for _, row in scenarios_csv.iterrows():
-        answers = [row['ans0'], row['ans1'], row['ans2']]
-        scenario = {
-            'question': row['question'],
-            'answers': answers,
-        }
-        scenarios.append(scenario)
-    scripts['scenarios'] = scenarios
-
-    # 個別に送るメッセージ
-    url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/mission.csv"
-    missions_csv = pd.read_csv(url)
-    missions = []
-    for _, row in missions_csv.iterrows():
-        missions.append(row['mission'])
-    scripts['missions'] = missions
-
-    # ヘンテコミッション（easy, hard）
-    url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/easymission.csv"
-    easy_missions_csv = pd.read_csv(url)
-    easy_missions = []
-    for _, row in easy_missions_csv.iterrows():
-        easy_missions.append(row['mission'])
-    scripts['easy_missions'] = easy_missions
-
-    url = "https://raw.githubusercontent.com/wakwakcreate/drink_scripts/main/hardmission.csv"
-    hard_missions_csv = pd.read_csv(url)
-    hard_missions = []
-    for _, row in hard_missions_csv.iterrows():
-        hard_missions.append(row['mission'])
-    scripts['hard_missions'] = hard_missions
-
-    print("Scripts loaded.")
 
 
 # Main callback
