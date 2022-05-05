@@ -22,9 +22,9 @@ python3 をインストールし、`requirements.txt` を使って必要なラ�
 $ pip install -r `requirements.txt`
 ```
 
-### yusha_no_koushin 起動例
+### 起動例
 
-TOKEN や SECRET は LINE Developers 
+TOKEN や SECRET は LINE Developers にログインして確認。
 
 ```sh
 #!/bin/bash
@@ -33,6 +33,12 @@ export YOUR_CHANNEL_ACCESS_TOKEN="**********************************************
 export YOUR_CHANNEL_SECRET="********************************"
 export FLASK_APP="./main.py"
 flask run --debugger --reload
+```
+
+### テスト
+
+```sh
+$ pytest test
 ```
 
 ### webhook として使えるようにする方法
