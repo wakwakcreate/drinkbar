@@ -105,7 +105,7 @@ def start_debug_mode(token):
 
 @handler.add(JoinEvent)
 def handle_join(event):
-    reply_init_message(event.reply_token, event.source.group_id)
+    reply_init_message(event.reply_token)
 
 
 @ handler.add(MessageEvent, message=TextMessage)
