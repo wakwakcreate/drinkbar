@@ -132,21 +132,13 @@ def handle_postback(event):
     game_str = event.postback.data
     game = json.loads(game_str)
 
-    reply_messages = []
+    reply_messages = None
 
     if game['state'] == STATE_USER_SELECT:
         reply_messages = on_user_select()
 
     elif game['state'] == STATE_USER0_JOIN:
-        game['users'] = [{'id': user_id}]
-        game_str = create_game_str_with_change(game, 'state', STATE_USER1_JOIN)
-
-        text = "二人目の参加者はボタンを押してね。"
-        action = PostbackAction("参加", game_str)
-        selection = ButtonsTemplate(text, actions=[action])
-        selection_message = TemplateSendMessage(text, selection)
-
-        reply_messages = [selection_message]
+        reply_messages = on_user0_join(game, user_id)
 
     elif game['state'] == STATE_USER1_JOIN:
         # Ignore duplicate join button click
@@ -377,7 +369,8 @@ def handle_postback(event):
         reply_messages = [image_message, text_message, selection_message]
 
     # メッセージ送信
-    line_bot_api.reply_message(event.reply_token, reply_messages)
+    if reply_messages is not None:
+        line_bot_api.reply_message(event.reply_token, reply_messages)
 
 
 

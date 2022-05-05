@@ -23,3 +23,14 @@ def on_user_select():
     selection_message = TemplateSendMessage(text, selection)
 
     return [selection_message]
+
+def on_user0_join(game, user_id):
+    game['users'] = [{'id': user_id}]
+    game_str = create_game_str_with_change(game, 'state', STATE_USER1_JOIN)
+
+    text = "二人目の参加者はボタンを押してね。"
+    action = PostbackAction("参加", game_str)
+    selection = ButtonsTemplate(text, actions=[action])
+    selection_message = TemplateSendMessage(text, selection)
+
+    return [selection_message]
