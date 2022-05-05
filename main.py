@@ -219,6 +219,8 @@ def handle_postback(event):
     game_str = event.postback.data
     game = json.loads(game_str)
 
+    reply_messages = []
+
     if game['state'] == STATE_INIT:
         game = {}
         game['state'] = STATE_USER_SELECT
@@ -230,7 +232,7 @@ def handle_postback(event):
         selection = ButtonsTemplate(text, actions=[action])
         selection_message = TemplateSendMessage(text, selection)
 
-        line_bot_api.reply_message(event.reply_token, selection_message)
+        reply_messages = [selection_message]
 
     elif game['state'] == STATE_USER_SELECT:
         game['users'].append({'id': user_id})
@@ -242,7 +244,7 @@ def handle_postback(event):
         selection = ButtonsTemplate(text, actions=[action])
         selection_message = TemplateSendMessage(text, selection)
 
-        line_bot_api.reply_message(event.reply_token, selection_message)
+        reply_messages = [selection_message]
 
     elif game['state'] == STATE_USER0_JOIN:
         # Ignore duplicate join button click
@@ -259,7 +261,7 @@ def handle_postback(event):
         selection = ButtonsTemplate(text, actions=[action])
         selection_message = TemplateSendMessage(text, selection)
 
-        line_bot_api.reply_message(event.reply_token, selection_message)
+        reply_messages = [selection_message]
 
     elif game['state'] == STATE_USER1_JOIN:
         # Ignore duplicate join button click
@@ -281,7 +283,7 @@ def handle_postback(event):
         selection = ButtonsTemplate(text, actions=actions)
         selection_message = TemplateSendMessage(text, selection)
 
-        line_bot_api.reply_message(event.reply_token, selection_message)
+        reply_messages = [selection_message]
 
     elif game['state'] == STATE_USER2_JOIN:
         game['state'] = STATE_DIFFICULTY_SELECTED
@@ -350,10 +352,8 @@ def handle_postback(event):
         image_url = "https://github.com/wakwakcreate/drink_scripts/raw/main/countdown.gif"
         image_message = ImageSendMessage(image_url, image_url)
 
-        # メッセージを送信
-        line_bot_api.reply_message(
-            event.reply_token,
-            [selection_message, image_message])
+        # 返信メッセージ 
+        reply_messages = [selection_message, image_message]
     
     elif game['state'] == STATE_DIFFICULTY_SELECTED:
         game['state'] = STATE_ANSWER_SELECTED
@@ -383,10 +383,8 @@ def handle_postback(event):
         selection = ButtonsTemplate(message, actions=actions)
         selection_message = TemplateSendMessage(message, selection)
 
-        # メッセージを送信
-        line_bot_api.reply_message(
-            event.reply_token,
-            [text_message, selection_message])
+        # 返信メッセージ 
+        reply_messages = [text_message, selection_message]
 
     elif game['state'] == STATE_ANSWER_SELECTED:
         game['state'] = STATE_JASMINE_SELECTED
@@ -476,12 +474,11 @@ def handle_postback(event):
         selection = ButtonsTemplate(message, actions=actions)
         selection_message = TemplateSendMessage(message, selection)
 
-        # -----------------------------
-        # メッセージ送信
-        # -----------------------------
-        line_bot_api.reply_message(
-            event.reply_token,
-            [image_message, text_message, selection_message])
+        # 返信メッセージ 
+        reply_messages = [image_message, text_message, selection_message]
+
+    # メッセージ送信
+    line_bot_api.reply_message(event.reply_token, reply_messages)
 
 
 
