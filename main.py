@@ -122,35 +122,7 @@ def handle_postback(event):
         reply_messages = on_difficulty_selected(line_bot_api, game, group_id, scripts)
     
     elif game['state'] == STATE_ANSWER_SELECTED:
-        game['state'] = STATE_JASMINE_SELECTED
-
-        # 選択された答えの確認メッセージ
-        scenario = scripts['scenarios'][game['s_id']]
-        selected_answer_id = game['sa_id'] # Selected Answer id
-        answer = scenario['answers'][selected_answer_id]
-        message = f"{answer} が選択されたぞ。"
-        text_message = TextSendMessage(message)
-
-        # ジャスミンティ選択メッセージ
-        orange_user_id, orange_user_name = get_user_from_drink_id(line_bot_api, game, group_id, DRINK_ORANGE)
-        message = f"オレンジジュースの{orange_user_name}さん、ジャスミンティがいるか推理し、1つ選ぼう"
-        actions = []
-        for idx, user in enumerate(game['users']):
-            user_id = user['id']
-            # Ignore self
-            if user_id == orange_user_id:
-                continue
-            user_name = get_user_name(line_bot_api, group_id, user_id)
-            next_game_str = create_game_str_with_change(game, 'su_idx', idx)
-            actions.append(PostbackAction(user_name, next_game_str))
-        next_game_str = create_game_str_with_change(game, 'su_idx', -1)
-        actions.append(PostbackAction(label='いない', data=next_game_str))
-
-        selection = ButtonsTemplate(message, actions=actions)
-        selection_message = TemplateSendMessage(message, selection)
-
-        # 返信メッセージ 
-        reply_messages = [text_message, selection_message]
+        reply_messages = on_answer_selected(line_bot_api, game, group_id, scripts)
 
     elif game['state'] == STATE_JASMINE_SELECTED:
         # 答え合わせメッセージ返信

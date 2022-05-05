@@ -23,6 +23,9 @@ def test_get_user_name():
 def test_get_user_from_drink_id(user_id_only):
     for l in itertools.permutations(DRINK_LIST):
         # Use first 3 drinks for game state
+        # Orange and Melon are always exists
+        if l[3] == DRINK_ORANGE or l[3] == DRINK_MELON:
+            continue
         game = {
             'users': [
                 {'id': DUMMY_USER_ID0, 'drink': l[0]},

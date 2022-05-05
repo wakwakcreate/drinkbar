@@ -41,9 +41,14 @@ def load_scripts():
 
     print("Scripts loaded.")
 
+# TODO: Make it more complicated
 dummy_scripts = {
     'scenarios': [
-        {'question': 'q0', 'answers': ['a0', 'a1', 'a2']}
+        {'question': 'q0', 'answers': ['a00', 'a01', 'a02']},
+        {'question': 'q1', 'answers': ['a10', 'a11', 'a12']},
+        {'question': 'q2', 'answers': ['a20', 'a21', 'a22']},
+        {'question': 'q3', 'answers': ['a30', 'a31', 'a32']},
+        {'question': 'q4', 'answers': ['a40', 'a41', 'a42']},
     ],
     'missions': [
         'Missions for melon',
@@ -52,9 +57,17 @@ dummy_scripts = {
         'Missions for jasmine',
     ],
     'easy_missions': [
-        'Easy mission 0'
+        'Easy mission 0',
+        'Easy mission 1',
+        'Easy mission 2',
+        'Easy mission 3',
+        'Easy mission 4',
     ],
     'hard_missions': [
-        'Hard mission 0'
+        'Hard mission 0',
+        'Hard mission 1',
+        'Hard mission 2',
+        'Hard mission 3',
+        'Hard mission 4',
     ]
 }
