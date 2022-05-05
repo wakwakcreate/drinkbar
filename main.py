@@ -29,7 +29,10 @@ YOUR_CHANNEL_SECRET = os.environ["YOUR_CHANNEL_SECRET"]
 line_bot_api = LineBotApi(YOUR_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(YOUR_CHANNEL_SECRET)
 
-STATE_USER0_JOIN = 0,
+STATE_USER_SELECT = 10
+STATE_USER0_JOIN = 11
+STATE_USER1_JOIN = 12
+STATE_USER2_JOIN = 13
 
 # Constants
 c = {
@@ -72,16 +75,11 @@ def callback():
 
     return 'OK'
 
-
-@handler.add(JoinEvent)
-def handle_join(event):
-    source = event.source
-    group_id = source.group_id
-
-    game = {
-        'state': STATE_USER0_JOIN,
-        'group_id': group_id,
-    }
+def reply_init_message(token, group_id):
+    game = {}
+    game['state'] = STATE_USER_SELECT
+    game['group_id'] = group_id
+    game['debug_mode'] = False
     game_str = json.dumps(game)
 
     text = "一人目の参加者はボタンを押してね。"
@@ -89,8 +87,91 @@ def handle_join(event):
     selection = ButtonsTemplate(text, actions=[action])
     selection_message = TemplateSendMessage(text, selection)
 
-    line_bot_api.reply_message(event.reply_token, selection_message)
+    line_bot_api.reply_message(token, selection_message)
 
+def start_debug_mode(token, group_id):
+    game = {}
+    game['state'] = STATE_USER1_JOIN
+    game['group_id'] = group_id
+    game['user_ids'] = ["dummy_user_id_0", "dummy_user_id_1"]
+    game['debug_mode'] = True
+    game_str = json.dumps(game)
+
+    text = "三人目の参加者はボタンを押してね。"
+    action = PostbackAction("参加", game_str)
+    selection = ButtonsTemplate(text, actions=[action])
+    selection_message = TemplateSendMessage(text, selection)
+
+    line_bot_api.reply_message(token, selection_message)
+
+
+@handler.add(JoinEvent)
+def handle_join(event):
+    reply_init_message(event.reply_token, event.source.group_id)
+
+
+@ handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    source = event.source
+    group_id = source.group_id
+
+    # デバッグコマンドを処理
+    if event.message.text == "init":
+        reply_init_message(event.reply_token, group_id)
+        return
+    
+    if event.message.text == "debug":
+        start_debug_mode(event.reply_token, group_id)
+        return
+
+
+@ handler.add(PostbackEvent)
+def handle_postback(event):
+    source = event.source
+    # group_id = source.group_id
+    user_id = source.user_id
+
+    game_str = event.postback.data
+    game = json.loads(game_str)
+
+    if game['state'] == STATE_USER_SELECT:
+        game['user_ids'] = [user_id]
+        game['state'] = STATE_USER0_JOIN
+        game_str = json.dumps(game)
+
+        text = "二人目の参加者はボタンを押してね。"
+        action = PostbackAction("参加", game_str)
+        selection = ButtonsTemplate(text, actions=[action])
+        selection_message = TemplateSendMessage(text, selection)
+
+        line_bot_api.reply_message(event.reply_token, selection_message)
+
+    elif game['state'] == STATE_USER0_JOIN:
+        # Ignore duplicate join button click
+        if (user_id in game['user_ids']):
+            return
+        
+        game['user_ids'].append(user_id)
+        game['state'] = STATE_USER1_JOIN
+        game_str = json.dumps(game)
+
+        text = "三人目の参加者はボタンを押してね。"
+        action = PostbackAction("参加", game_str)
+        selection = ButtonsTemplate(text, actions=[action])
+        selection_message = TemplateSendMessage(text, selection)
+
+        line_bot_api.reply_message(event.reply_token, selection_message)
+
+    elif game['state'] == STATE_USER1_JOIN:
+        # Ignore duplicate join button click
+        if (user_id in game['user_ids']):
+            return
+        
+        game['user_ids'].append(user_id)
+        game['state'] = STATE_USER2_JOIN
+        game_str = json.dumps(game)
+
+        print("ok")
 
 if __name__ == "__main__":
     load_scripts()
