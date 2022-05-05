@@ -105,26 +105,21 @@ def handle_postback(event):
     game = json.loads(game_str)
 
     reply_messages = None
+    state = game['state']
 
-    if game['state'] == STATE_USER_SELECT:
+    if state == STATE_USER_SELECT:
         reply_messages = on_user_select()
-
-    elif game['state'] == STATE_USER0_JOIN:
+    elif state == STATE_USER0_JOIN:
         reply_messages = on_user0_join(game, user_id)
-
-    elif game['state'] == STATE_USER1_JOIN:
+    elif state == STATE_USER1_JOIN:
         reply_messages = on_user1_join(game, user_id)
-
-    elif game['state'] == STATE_USER2_JOIN:
+    elif state == STATE_USER2_JOIN:
         reply_messages = on_user2_join(game, user_id)
-
-    elif game['state'] == STATE_DIFFICULTY_SELECTED:
+    elif state == STATE_DIFFICULTY_SELECTED:
         reply_messages = on_difficulty_selected(line_bot_api, game, group_id, scripts)
-    
-    elif game['state'] == STATE_ANSWER_SELECTED:
+    elif state == STATE_ANSWER_SELECTED:
         reply_messages = on_answer_selected(line_bot_api, game, group_id, scripts)
-
-    elif game['state'] == STATE_JASMINE_SELECTED:
+    elif state == STATE_JASMINE_SELECTED:
         reply_messages = on_jasmine_selected(line_bot_api, game, group_id, scripts)
 
     # メッセージ送信
