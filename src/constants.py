@@ -14,6 +14,7 @@ DRINK_MELON = 0
 DRINK_ORANGE = 1
 DRINK_OOLONG = 2
 DRINK_JASMINE = 3
+DRINK_LIST = [DRINK_MELON, DRINK_ORANGE, DRINK_OOLONG, DRINK_JASMINE]
 
 # For test and debug use only
 DUMMY_USER_ID0 = 'Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
