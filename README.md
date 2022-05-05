@@ -6,10 +6,9 @@ https://github.com/line/line-bot-sdk-python を使用して開発。
 
 グループ内で以下の文字列を書き込むと、説明の通りの動作をした後にゲームがリセットされます。
 
-* `debug one`: 1人でゲーム進行可（2人ダミーを追加）
-* `debug two`: 2人でゲーム進行可（1人ダミーを追加）
-* `debug three`: 2人でゲーム進行可（1人ダミーを追加）
-* `debug reload`: セリフやお題を https://github.com/wakwakcreate/drink_scripts から再読込する
+* `d`: 1人でゲーム進行可（2人ダミーを追加）
+* `i`: ゲームを初期化
+* `スタート`: ゲームを初期化
 
 ## ローカルでの開発方法
 
