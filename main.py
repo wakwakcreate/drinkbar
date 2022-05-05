@@ -156,22 +156,18 @@ def callback():
 
     return 'OK'
 
-def reply_init_message(token, group_id):
+def reply_init_message(token):
     load_scripts()
 
-    game = {}
-    game['state'] = STATE_USER_SELECT
-    game['users'] = []
-    game_str = json.dumps(game)
-
     text = "一人目の参加者はボタンを押してね。"
+    game_str = create_game_str_with_change({}, 'state', STATE_USER_SELECT)
     action = PostbackAction("参加", game_str)
     selection = ButtonsTemplate(text, actions=[action])
     selection_message = TemplateSendMessage(text, selection)
 
     line_bot_api.reply_message(token, selection_message)
 
-def start_debug_mode(token, group_id):
+def start_debug_mode(token):
     load_scripts()
 
     game = {}
@@ -202,11 +198,11 @@ def handle_message(event):
 
     # デバッグコマンドを処理
     if event.message.text == "i" or event.message.text == "スタート":
-        reply_init_message(event.reply_token, group_id)
+        reply_init_message(event.reply_token)
         return
     
     if event.message.text == "d":
-        start_debug_mode(event.reply_token, group_id)
+        start_debug_mode(event.reply_token)
         return
 
 
@@ -222,10 +218,7 @@ def handle_postback(event):
     reply_messages = []
 
     if game['state'] == STATE_INIT:
-        game = {}
-        game['state'] = STATE_USER_SELECT
-        game['users'] = []
-        game_str = json.dumps(game)
+        game_str = create_game_str_with_change({}, 'state', STATE_USER_SELECT)
 
         text = "一人目の参加者はボタンを押してね。"
         action = PostbackAction("参加", game_str)
@@ -235,9 +228,8 @@ def handle_postback(event):
         reply_messages = [selection_message]
 
     elif game['state'] == STATE_USER_SELECT:
-        game['users'].append({'id': user_id})
-        game['state'] = STATE_USER0_JOIN
-        game_str = json.dumps(game)
+        game['users'] = [{'id': user_id}]
+        game_str = create_game_str_with_change(game, 'state', STATE_USER0_JOIN)
 
         text = "二人目の参加者はボタンを押してね。"
         action = PostbackAction("参加", game_str)
@@ -253,8 +245,7 @@ def handle_postback(event):
                 return
         
         game['users'].append({'id': user_id})
-        game['state'] = STATE_USER1_JOIN
-        game_str = json.dumps(game)
+        game_str = create_game_str_with_change(game, 'state', STATE_USER1_JOIN)
 
         text = "三人目の参加者はボタンを押してね。"
         action = PostbackAction("参加", game_str)
@@ -271,7 +262,6 @@ def handle_postback(event):
         
         game['users'].append({'id': user_id})
         game['state'] = STATE_USER2_JOIN
-
         game_easy_str = create_game_str_with_change(game, 'difficulty', GAME_EASY)
         game_hard_str = create_game_str_with_change(game, 'difficulty', GAME_HARD)
 
