@@ -227,7 +227,7 @@ def on_jasmine_selected(api, game, group_id, scripts):
         user_id = user['id']
         user_name = get_user_name(api, group_id, user_id)
         drink_name = get_drink_name(user['drink'])
-        message += user_name + ": " + drink_name + "\n"
+        message += drink_name + ": " + user_name + "\n"
     # チャポンの選択肢
     scenario = scripts['scenarios'][game['s_id']]
     chapon_answer = scenario['answers'][game['c_id']]
