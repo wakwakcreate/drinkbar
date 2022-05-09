@@ -107,7 +107,7 @@ def on_difficulty_selected(api, game, group_id, scripts):
 
         message = f"あなた（{user_name}）に{drink_name}が乗り移ったぞ。\n"
         message += f"\n{drink_name}のあなたは、{mission}\n"
-        message += f"これが勝利条件だ！"
+        message += f"これが勝利条件だ！\n"
         if drink_id == DRINK_JASMINE:
             message += f"\nへんてこミッション：『{hentekos[henteko_id]}』\n"
         if drink_id == DRINK_MELON:
@@ -115,7 +115,7 @@ def on_difficulty_selected(api, game, group_id, scripts):
             chapon_ans = answers[game['c_id']]
             message += f"\nチャポンの選択肢は「{chapon_ans}」だ。チャポンの選択肢が何かはあなたしか知らないぞ。\n"
         else:
-            message += f"\nチャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。\n"
+            message += f"\nチャポンの選択肢はメロンソーダの人しか知らない。メロンソーダに騙されるな。"
 
         # Do not send message to dummy users
         if user_id == DUMMY_USER_ID0 or user_id == DUMMY_USER_ID1:
