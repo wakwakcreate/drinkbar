@@ -228,19 +228,19 @@ def on_jasmine_selected(api, game, group_id, scripts):
         user_name = get_user_name(api, group_id, user_id)
         drink_name = get_drink_name(user['drink'])
         message += drink_name + ": " + user_name + "\n"
+    # 選択されたユーザー
+    selected_user_name = "いない"
+    if game['su_idx'] != -1:
+        selected_user_id = game['users'][game['su_idx']]['id']
+        selected_user_name = get_user_name(api, group_id, selected_user_id)
+    message += "\nオレンジジュースがジャスミンティだと思ったユーザー:" + selected_user_name + "\n"
     # チャポンの選択肢
     scenario = scripts['scenarios'][game['s_id']]
     chapon_answer = scenario['answers'][game['c_id']]
     message += "\nチャポンの選択肢:\n" + chapon_answer
     # 選択された選択肢
     selected_answer = scenario['answers'][game['sa_id']]
-    message += "\n選択された選択肢:\n" + selected_answer
-    # 選択されたユーザー
-    selected_user_name = "いない"
-    if game['su_idx'] != -1:
-        selected_user_id = game['users'][game['su_idx']]['id']
-        selected_user_name = get_user_name(api, group_id, selected_user_id)
-    message += "\n選択されたユーザー:\n" + selected_user_name
+    message += "\n選択された選択肢:\n" + selected_answer + "\n"
     # へんてこミッションの内容
     if jasmine_user_id is not None:
         hentekos = scripts['easy_missions'] if game['difficulty'] == GAME_EASY else scripts['hard_missions']
