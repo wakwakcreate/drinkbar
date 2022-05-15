@@ -137,8 +137,8 @@ def on_difficulty_selected(api, game, group_id, scripts):
     selection = ButtonsTemplate(question, actions=actions)
     selection_message = TemplateSendMessage(question, selection)
 
-    # カウントダウン画像メッセージ
-    image_url = "https://github.com/wakwakcreate/drink_scripts/raw/main/countdown.gif"
+    # ルール画像メッセージ
+    image_url = "https://github.com/wakwakcreate/drink_scripts/raw/main/condition.png"
     image_message = ImageSendMessage(image_url, image_url)
 
     return [selection_message, image_message]
