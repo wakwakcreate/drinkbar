@@ -124,6 +124,11 @@ def on_difficulty_selected(api, game, group_id, scripts):
         # NOTICE: This consumes API call count
         api.push_message(
             user_id, TextSendMessage(text=message))
+        
+        # 画像の送信
+        image_url = "https://github.com/wakwakcreate/drink_scripts/raw/main/rule.png"
+        api.push_message(
+            user_id, ImageSendMessage(image_url, image_url))
     
     # お題選択肢ボタンメッセージ
     scenario = scenarios[scenario_id]
